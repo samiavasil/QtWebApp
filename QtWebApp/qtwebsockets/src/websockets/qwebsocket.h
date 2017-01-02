@@ -52,6 +52,8 @@
 #endif
 #include "QtWebSockets/qwebsockets_global.h"
 #include "QtWebSockets/qwebsocketprotocol.h"
+#include "qwebsockethandshakerequest_p.h"
+#include "qwebsockethandshakeresponse_p.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -70,7 +72,8 @@ public:
                         QWebSocketProtocol::Version version = QWebSocketProtocol::VersionLatest,
                         QObject *parent = Q_NULLPTR);
     virtual ~QWebSocket();
-
+    static QWebSocket *upgradeFrom(QTcpSocket *tcpSocket, const QString& serverName,  bool isSecure,
+                                   QObject *parent = Q_NULLPTR) Q_REQUIRED_RESULT;
     void abort();
     QAbstractSocket::SocketError error() const;
     QString errorString() const;

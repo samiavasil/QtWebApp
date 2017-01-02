@@ -27,7 +27,11 @@ CONFIG(debug, debug|release) {
 DISTFILES += doc/* mainpage.dox Doxyfile
 OTHER_FILES += ../readme.txt
 
+
+include(qtwebsockets/src/websockets/qtwebsockets.pri)
 include(qtservice/qtservice.pri)
 include(logging/logging.pri)
 include(httpserver/httpserver.pri)
 include(templateengine/templateengine.pri)
+
+

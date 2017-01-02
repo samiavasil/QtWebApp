@@ -64,6 +64,7 @@
 #include <QtCore/QTime>
 #include <private/qobject_p.h>
 
+
 #include "qwebsocketprotocol.h"
 #include "qwebsocketdataprocessor_p.h"
 #include "qdefaultmaskgenerator_p.h"
@@ -105,6 +106,11 @@ public:
                                QWebSocketProtocol::Version version,
                                QWebSocket * const pWebSocket);
     virtual ~QWebSocketPrivate();
+
+    static QWebSocket *upgradeFrom(QTcpSocket *tcpSocket,
+                                   const QWebSocketHandshakeRequest &request,
+                                   const QWebSocketHandshakeResponse &response,
+                                   QObject *parent = Q_NULLPTR) Q_REQUIRED_RESULT;
 
     void init();
     void abort();
@@ -195,10 +201,7 @@ private:
                                    QByteArray key,
                                    const QList<QPair<QString, QString> > &headers);
 
-    static QWebSocket *upgradeFrom(QTcpSocket *tcpSocket,
-                                   const QWebSocketHandshakeRequest &request,
-                                   const QWebSocketHandshakeResponse &response,
-                                   QObject *parent = Q_NULLPTR) Q_REQUIRED_RESULT;
+
 
     quint32 generateMaskingKey() const;
     QByteArray generateKey() const;

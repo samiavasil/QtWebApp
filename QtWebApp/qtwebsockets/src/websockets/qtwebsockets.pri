@@ -1,8 +1,20 @@
-CONFIG += staticlib
-TARGET = QtWebSockets
-TEMPLATE = lib
-QT = core-private network
+INCLUDEPATH += $$PWD
+DEPENDPATH += $$PWD
 
+#!win32:QT += network
+#win32:LIBS += -luser32
+
+#HEADERS += $$PWD/qtservice.h $$PWD/qtservice_p.h
+#unix:HEADERS += $$PWD/qtunixsocket.h $$PWD/qtunixserversocket.h
+
+#SOURCES += $$PWD/qtservice.cpp
+#win32:SOURCES += $$PWD/qtservice_win.cpp
+#unix:SOURCES += $$PWD/qtservice_unix.cpp $$PWD/qtunixsocket.cpp $$PWD/qtunixserversocket.cpp
+
+#include(qtwebsockets.pro)
+# core-private
+QT = core-private network
+message(  $$PWD )
 PUBLIC_HEADERS += \
     $$PWD/qwebsockets_global.h \
     $$PWD/qwebsocket.h \
@@ -36,11 +48,9 @@ SOURCES += \
     $$PWD/qmaskgenerator.cpp \
     $$PWD/qdefaultmaskgenerator_p.cpp
 
- 
+#qtConfig(ssl) {
     SOURCES += $$PWD/qsslserver.cpp
     PRIVATE_HEADERS += $$PWD/qsslserver_p.h
- 
+#}
 
 HEADERS += $$PUBLIC_HEADERS $$PRIVATE_HEADERS
-
-#load(qt_module)

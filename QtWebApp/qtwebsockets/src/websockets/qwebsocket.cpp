@@ -283,6 +283,10 @@ not been filled in with new information when the signal returns.
 
 QT_BEGIN_NAMESPACE
 
+#include"qwebsocketcorsauthenticator.h"
+const int MAX_HEADERLINE_LENGTH = 8 * 1024; //maximum length of a http request header line
+const int MAX_HEADERLINES = 100;            //maximum number of http request header lines
+
 /*!
  * \brief Creates a new QWebSocket with the given \a origin,
  * the \a version of the protocol to use and \a parent.
@@ -311,6 +315,54 @@ QWebSocket::~QWebSocket()
 {
     Q_D(QWebSocket);
     d->closeGoingAway();
+}
+
+QWebSocket *QWebSocket::upgradeFrom(QTcpSocket *tcpSocket, const QString& serverName,  bool isSecure, QObject *parent )
+{
+    QWebSocket* wSocket = NULL;
+    qDebug() << "HTTP signature detected, using WebSocket handler";
+    QWebSocketHandshakeRequest request(tcpSocket->peerPort(), isSecure );
+    QTextStream textStream(tcpSocket);
+    request.readHandshake(textStream, MAX_HEADERLINE_LENGTH, MAX_HEADERLINES);
+
+    if (request.isValid())
+    {
+
+        QWebSocketCorsAuthenticator corsAuthenticator(request.origin());
+        //TODO    Q_EMIT q->originAuthenticationRequired(&corsAuthenticator);
+        QList<QWebSocketProtocol::Version> supportedVersions;
+        supportedVersions << QWebSocketProtocol::currentVersion();	//we only support V13
+        QStringList supportedProtocols;	 //no protocols are currently supported
+        QStringList supportedExtensions; //no extensions are currently supported
+        QWebSocketHandshakeResponse response(request,
+                                             serverName,
+                                             corsAuthenticator.allowed(),
+                                             supportedVersions,
+                                             supportedProtocols,
+                                             supportedExtensions );
+
+        if( response.isValid() )
+        {
+            QTextStream httpStream(tcpSocket);
+            httpStream << response;
+            httpStream.flush();
+
+            if( response.canUpgrade() )
+            {
+                wSocket = QWebSocketPrivate::upgradeFrom( tcpSocket, request, response, parent);
+            }
+            else
+            {
+                qDebug() << "ERROR can't upgrade to websocket: " << response.errorString();
+            }
+        }
+        else
+        {
+            qDebug() << "ERROR: " << tr("Invalid response received.");
+        }
+    }
+
+    return wSocket;
 }
 
 /*!
