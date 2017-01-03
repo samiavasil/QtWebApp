@@ -3,4 +3,9 @@
  Fork from Stefan QtWebApp: 
  http://stefanfrings.de/qtwebapp/index-en.html
 
-The main idea of this fork is to add Websockets support. Because Qt framework  websockets implementation in current moment  doesn't allow direct  upgrade from TCP socket to websocket i decided to copy QWebsocket library in QtWebApp library and to made needed modifications.
+The main idea of this fork is to add Websockets support.  
+Qt framework doesn't support direct  upgrade from QTcpSocket to QWebSocket sockets in the current moment. Therefore, I decided to copy QtWebsocket library in QtWebApp and make necessary changes.
+Example Demo1 has been updated to demonstrate WebSocket communication.
+By default server is stated in https secured mode on https://localhost:8080. 
+
+You can go in browser on https://localhost:8080 and there is located a link to simple Websockets demo. 
