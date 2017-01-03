@@ -17,6 +17,8 @@
 #include "httprequest.h"
 #include "httprequesthandler.h"
 
+class QWebSocket;
+
 namespace stefanfrings {
 
 /** Alias type definition, for compatibility to different Qt versions */
@@ -70,12 +72,23 @@ public:
     void setBusy();
 
 private:
+    typedef enum{
+        UNDEFINED,
+        HTTP,
+        WEBSOCKET
+    } HandlerType_t;
+
+    HandlerType_t m_type;
+
+    QString m_serverName;
 
     /** Configuration settings */
     QSettings* settings;
 
     /** TCP socket of the current connection  */
     QTcpSocket* socket;
+
+    QWebSocket* m_WebSocket;
 
     /** Time for read timeout detection */
     QTimer readTimer;
@@ -98,6 +111,8 @@ private:
     /**  Create SSL or TCP socket */
     void createSocket();
 
+    bool websocketHandshake(QTcpSocket *pTcpSocket);
+
 public slots:
 
     /**
@@ -114,9 +129,15 @@ private slots:
     /** Received from the socket when incoming data can be read */
     void read();
 
+    void websocketRead(const QString &data);
+
     /** Received from the socket when a connection has been closed */
     void disconnected();
 
+    void readHttp();
+    void preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator);
+    void encrypted();
+    void sslErrors(const QList<QSslError> &errors);
 };
 
 } // end of namespace

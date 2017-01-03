@@ -5,11 +5,12 @@
 
 #include "httpconnectionhandler.h"
 #include "httpresponse.h"
+#include "qwebsocket.h"
 
 using namespace stefanfrings;
 
 HttpConnectionHandler::HttpConnectionHandler(QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration)
-    : QThread()
+    : QThread(),m_type(UNDEFINED),m_serverName("Websocket Test Server"),socket(NULL),m_WebSocket(NULL)
 {
     Q_ASSERT(settings!=0);
     Q_ASSERT(requestHandler!=0);
@@ -27,9 +28,6 @@ HttpConnectionHandler::HttpConnectionHandler(QSettings* settings, HttpRequestHan
     socket->moveToThread(this);
     readTimer.moveToThread(this);
 
-    // Connect signals
-    connect(socket, SIGNAL(readyRead()), SLOT(read()));
-    connect(socket, SIGNAL(disconnected()), SLOT(disconnected()));
     connect(&readTimer, SIGNAL(timeout()), SLOT(readTimeout()));
     readTimer.setSingleShot(true);
 
@@ -42,7 +40,7 @@ HttpConnectionHandler::~HttpConnectionHandler()
 {
     quit();
     wait();
-    qDebug("HttpConnectionHandler (%p): destroyed", this);
+    qDebug("HttpConnectionHandler (%p) type (%d): destroyed", this, m_type);
 }
 
 
@@ -52,7 +50,17 @@ void HttpConnectionHandler::createSocket()
     #ifndef QT_NO_OPENSSL
         if (sslConfiguration)
         {
-            QSslSocket* sslSocket=new QSslSocket();
+            QSslSocket* sslSocket = NULL;
+            if( socket )
+            {
+                sslSocket = qobject_cast<QSslSocket*>(socket);
+                Q_ASSERT( sslSocket );
+            }
+            else
+            {
+                sslSocket = new QSslSocket();
+                Q_ASSERT( sslSocket );
+            }
             sslSocket->setSslConfiguration(*sslConfiguration);
             socket=sslSocket;
             qDebug("HttpConnectionHandler (%p): SSL is enabled", this);
@@ -60,7 +68,11 @@ void HttpConnectionHandler::createSocket()
         }
     #endif
     // else create an instance of QTcpSocket
-    socket=new QTcpSocket();
+    if( NULL == socket )
+    {
+        socket=new QTcpSocket();
+    }
+
 }
 
 
@@ -81,6 +93,24 @@ void HttpConnectionHandler::run()
     qDebug("HttpConnectionHandler (%p): thread stopped", this);
 }
 
+void HttpConnectionHandler::preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator)
+{
+    qDebug() << "preSharedKeyAuthenticationRequired required";
+}
+
+void HttpConnectionHandler::encrypted()
+{
+    QSslSocket* sslSocket = (QSslSocket*)socket;
+    qDebug() << "SSL ENCRYPTED!!!!!!!!!!!!!!";
+    connect(sslSocket, SIGNAL(readyRead()), SLOT(read()));
+    connect(sslSocket, SIGNAL(disconnected()), SLOT(disconnected()));
+}
+
+void HttpConnectionHandler::sslErrors(const QList<QSslError> &errors)
+{
+    qDebug() << "SSL ERRORS: "  << errors;
+   ((  QSslSocket*)socket)->ignoreSslErrors();
+}
 
 void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
 {
@@ -90,9 +120,42 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
 
     //UGLY workaround - we need to clear writebuffer before reusing this socket
     //https://bugreports.qt-project.org/browse/QTBUG-28914
-    socket->connectToHost("",0);
-    socket->abort();
+   socket->connectToHost("",0);
+   socket->abort();
 
+#ifndef QT_NO_OPENSSL
+    if(sslConfiguration)
+    {
+        QSslSocket* sslSocket = NULL;
+        if( socket )
+        {
+            sslSocket = qobject_cast<QSslSocket*>(socket);
+            Q_ASSERT( sslSocket );
+        }
+        else
+        {
+            sslSocket = new QSslSocket();
+            Q_ASSERT( sslSocket );
+        }
+        sslSocket->setSslConfiguration(*sslConfiguration);
+        socket=sslSocket;
+        connect(sslSocket, SIGNAL(sslErrors(QList<QSslError>)),this, SLOT(sslErrors(QList<QSslError>)) );
+        connect(sslSocket, SIGNAL(encrypted()), this, SLOT(encrypted()));
+        connect(sslSocket, SIGNAL(preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator*)),
+        this, SLOT(preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator*)));
+        qDebug("HttpConnectionHandler (%p): SSL is enabled", this);
+    }
+    else
+    {
+        // Connect signals
+        connect(socket, SIGNAL(readyRead()), this,SLOT(read()));
+        connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
+    }
+#else
+   // Connect signals
+   connect(socket, SIGNAL(readyRead()), this,SLOT(read()));
+   connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
+#endif
     if (!socket->setSocketDescriptor(socketDescriptor))
     {
         qCritical("HttpConnectionHandler (%p): cannot initialize socket: %s", this,qPrintable(socket->errorString()));
@@ -104,7 +167,9 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
         if (sslConfiguration)
         {
             qDebug("HttpConnectionHandler (%p): Starting encryption", this);
-            ((QSslSocket*)socket)->startServerEncryption();
+            QSslSocket* ssl_socket = (QSslSocket*)socket;
+            ssl_socket->ignoreSslErrors();
+            ssl_socket->startServerEncryption();
         }
     #endif
 
@@ -114,6 +179,7 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
     // delete previous request
     delete currentRequest;
     currentRequest=0;
+
 }
 
 
@@ -130,13 +196,21 @@ void HttpConnectionHandler::setBusy()
 
 void HttpConnectionHandler::readTimeout()
 {
-    qDebug("HttpConnectionHandler (%p): read timeout occured",this);
+    qDebug("!!!!!!!!!!!HttpConnectionHandler (%p) type(%d): read timeout occured",this,m_type);
 
     //Commented out because QWebView cannot handle this.
     //socket->write("HTTP/1.1 408 request timeout\r\nConnection: close\r\n\r\n408 request timeout\r\n");
 
-    socket->flush();
-    socket->disconnectFromHost();
+
+    if( WEBSOCKET == m_type )
+    {
+         m_WebSocket->close();
+    }
+    else
+    {
+        socket->flush();
+        socket->disconnectFromHost();
+    }
     delete currentRequest;
     currentRequest=0;
 }
@@ -144,13 +218,69 @@ void HttpConnectionHandler::readTimeout()
 
 void HttpConnectionHandler::disconnected()
 {
-    qDebug("HttpConnectionHandler (%p): disconnected", this);
-    socket->close();
+    qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,m_type);
     readTimer.stop();
+
+    if( WEBSOCKET == m_type )
+    {
+        //m_WebSocket->close();
+        m_WebSocket->deleteLater();
+        m_WebSocket = NULL;
+    }
+    else
+    {
+        socket->close();
+        QObject::disconnect(socket,0,0,0);
+    }
+    m_type = UNDEFINED;
+    createSocket();
     busy = false;
 }
 
-void HttpConnectionHandler::read()
+//TODO: Fix me
+bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
+{
+    bool ret = false;
+    bool isSecure = false;
+    QWebSocket* pWebSocket = NULL;
+
+    if( pTcpSocket )
+    {
+        QByteArray line = pTcpSocket->peek(4096);
+
+        if( line.startsWith("GET ") && line.contains("Upgrade: websocket") )
+        {
+            pWebSocket = QWebSocket::upgradeFrom( pTcpSocket , m_serverName, isSecure);
+            if (pWebSocket)
+            {
+                m_WebSocket = pWebSocket;
+                //TODO  Q_EMIT q->newConnection();
+                qDebug("HttpConnectionHandler (%p) change type to WEBSOCKET", this);
+                int readTimeout=settings->value("readTimeout",10000).toInt();
+                readTimer.start(readTimeout);
+                ret = true;
+                qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(read()));
+                qDebug() << disconnect(pTcpSocket, SIGNAL(disconnected()),this, SLOT(disconnected()));
+                connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketRead(QString)));
+                connect(m_WebSocket, SIGNAL(disconnected()), SLOT(disconnected()));
+            }
+            else
+            {
+                qDebug() << tr("ERROR:  Upgrade to WebSocket failed.");
+                pTcpSocket->close();
+            }
+        }
+        else
+        {
+            qDebug() <<  tr("Not WebSocket Request.");
+        }
+    }
+    return  ret;
+}
+
+
+
+void HttpConnectionHandler::readHttp()
 {
     // The loop adds support for HTTP pipelinig
     while (socket->bytesAvailable())
@@ -274,4 +404,40 @@ void HttpConnectionHandler::read()
             currentRequest=0;
         }
     }
+}
+
+
+void HttpConnectionHandler::read()
+{
+    if (!socket->canReadLine()) {
+       return;
+    }
+    if( websocketHandshake( socket ) )
+    {
+        m_type = WEBSOCKET;
+    }
+    else
+    {
+        m_type = HTTP;
+        disconnect(socket, SIGNAL(readyRead()),this, SLOT(read()));
+        connect(socket, SIGNAL(readyRead()), this,SLOT(readHttp()));
+        readHttp();
+    }
+}
+
+void HttpConnectionHandler::websocketRead( const QString & data)
+{
+ //   qDebug() << "Websocket data:\n"  << data;
+    if(data=="ping")
+    {
+        m_WebSocket->sendTextMessage("pong");
+    }
+    else
+    {
+        m_WebSocket->sendTextMessage(data);
+    }
+    /*Reload read timeout*/
+    int readTimeout=settings->value("readTimeout",10000).toInt();
+    readTimer.start(readTimeout);
+  //  qDebug() << "Websocket: Reload timeout";
 }

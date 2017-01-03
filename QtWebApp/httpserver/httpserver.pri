@@ -1,6 +1,7 @@
 INCLUDEPATH += $$PWD
+#INCLUDEPATH += $$PWD/../qtwebsockets/src/websockets
 DEPENDPATH += $$PWD
-
+include($$PWD/../qtwebsockets/src/websockets/qtwebsockets.pri)
 QT += network
 
 # Enable very detailed debug messages when compiling the debug version

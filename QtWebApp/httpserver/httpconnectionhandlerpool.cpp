@@ -59,6 +59,17 @@ HttpConnectionHandler* HttpConnectionHandlerPool::getConnectionHandler()
             pool.append(freeHandler);
         }
     }
+#if 1 /*TODO: Dell Me pls*/
+    int k = 0;
+    foreach(HttpConnectionHandler* handler, pool)
+    {
+        if( handler->isBusy() )
+        {
+            k++;
+        }
+    }
+    qDebug() << "DBG: All Connection handlers: " << pool.count() << "  Busy: " << k << "  Free: " << pool.count()-k;
+#endif
     mutex.unlock();
     return freeHandler;
 }
