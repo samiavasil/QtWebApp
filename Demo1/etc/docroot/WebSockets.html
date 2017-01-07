@@ -4,20 +4,28 @@
   <title>WebSocket Tester</title>
   <script language="javascript" type="text/javascript" src="/jquery-2.0.3.min.js"></script>
   <script language="javascript" type="text/javascript">
-    var websocket;
-    var ping;
+    var clients = [];
+    var curId = 0;
+    var showPing = 0;
 
     jQuery(function ($) {
 
       $('#connect').click(doConnect);
       $('#disconnect').click(doDisconnect);
       $('#send').click(function () {
-        doSend( $('#message').val() )
+        var Id = $('#connections :selected').val();
+        doSend( getClientById( Id ),$('#message').val() );
       });
       $('#clear').click(function () {
          $('#output').empty();
       });
       
+        String.prototype.format = function(){
+          var args = arguments;
+          return this.replace(/\{(\d+)\}/g, function(a, num){
+            return args[num] || a
+          })
+        }
 
       function doConnect() {
         if (window.WebSocket) {      
@@ -27,7 +35,7 @@
 
         websocket.onopen = function (evt) {
             onOpen(evt)
-            var ping = setInterval(function () { doPing() }, 10000);
+            evt.currentTarget.pingWs = setInterval(function (ws) { doPing(ws) }, 10000, evt.currentTarget );
         };
         websocket.onclose = function (evt) {
             onClose(evt)
@@ -39,45 +47,74 @@
             onError(evt)
         };
       }
-
+      
+      function getClientById( Id ) {
+          for( var i=0; i < clients.length; i++ ){
+              if( clients[i].wsId == Id ){
+                  return clients[i];
+              }
+          }
+      }
+      
+      function removeClientById( Id ) {
+          for( var i=0; i < clients.length; i++ ){
+              if( clients[i].wsId == Id ){
+                  clients.splice(i, 1);
+                  $("#connections option[value=" + Id + "]").remove();
+                  break;
+              }
+          }
+      }
+        
       function doDisconnect() {
-        websocket.close();
+        var Id = $('#connections :selected').val();
+        getClientById( Id ).close();
       }
 
       function onOpen(evt) {
-        writeToScreen("CONNECTED");
+        websocket = evt.currentTarget;
+        websocket.wsId = curId;
+        clients.push( websocket )
+        $('#connections').append($('<option>', {
+            value: curId,
+            text: 'Connection_'+curId
+        }));
+        writeToScreen("Connection " + websocket.wsId + " Established" );
+        curId = curId + 1;
       }
 
       function onClose(evt) {
-        writeToScreen("DISCONNECTED");
+          websocket = evt.currentTarget;
+          clearInterval(websocket.pingWs);
+          writeToScreen("Connection " + websocket.wsId + " Disconnected");
+          removeClientById( websocket.wsId );
       }
 
       function onMessage(evt) {
-        if ((evt.data != "ping") && (evt.data != "pong")) {
-            writeToScreen('RECIEVED: ' + evt.data);
+        if( ( showPing != 0 )||(evt.data != "ping") && (evt.data != "pong") ) {
+            writeToScreen('RECIEVED WS_' + evt.currentTarget.wsId + ': ' + evt.data);
         }
       }
 
       function onError(evt) {
-        writeToScreen('ERROR:' + evt.data);
+        writeToScreen('ERROR WS_' + evt.currentTarget.wsId + ':' + evt.data);
       }
 
-      function doSend(message) {
-        if (message != "ping") {
-            writeToScreen('SENT: ' + message);
+      function doSend(ws,message) {
+        if (ws != "undefined") {
+          if( ( showPing != 0 )|| message != "ping" ) {
+              writeToScreen('SENT WS_' + ws.wsId + ': ' + message);
+          }
+          ws.send(message);
         }
-
-        websocket.send(message);
       }
 
       function writeToScreen(message) {
         $('#output').append(message + '<br /><br />');
       }
 
-      function doPing() {
-        if (websocket != "undefined") {
-            doSend("ping");
-        }
+      function doPing(ws) {
+        doSend(ws,"ping");
       }
 
     });
@@ -89,6 +126,8 @@
   <h2>WebSocket Tester</h2>
   Target:
   <input type="text" id="target" value="wss://localhost:8080" />
+  <select id="connections" name="connections" size=1>
+  </select>
   <br />
   <button id="connect">Connect</button>
   <button id="disconnect">Disconnect</button>
@@ -100,6 +139,5 @@
   <button id="clear">Clear</button>
   <br />Output:
   <br /> <pre><div id="output"></div></pre>
-
 </body>
 </html>
