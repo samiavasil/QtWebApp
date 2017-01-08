@@ -5,7 +5,7 @@
 
 #include "httpconnectionhandler.h"
 #include "httpresponse.h"
-#include "qwebsocket.h"
+
 
 using namespace stefanfrings;
 
@@ -261,7 +261,8 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
                 ret = true;
                 qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(read()));
                 qDebug() << disconnect(pTcpSocket, SIGNAL(disconnected()),this, SLOT(disconnected()));
-                connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketRead(QString)));
+                connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketTextMessage(QString)));
+                connect(m_WebSocket, SIGNAL(binaryFrameReceived(QByteArray,bool)), SLOT(websocketbinaryFrameReceived(QByteArray,bool)));
                 connect(m_WebSocket, SIGNAL(disconnected()), SLOT(disconnected()));
             }
             else
@@ -425,19 +426,44 @@ void HttpConnectionHandler::read()
     }
 }
 
-void HttpConnectionHandler::websocketRead( const QString & data)
+void HttpConnectionHandler::websocketTextMessage( const QString & data)
 {
- //   qDebug() << "Websocket data:\n"  << data;
-    if(data=="ping")
+    // Call the request mapper
+    try
     {
-        m_WebSocket->sendTextMessage("pong");
+        if(data=="ping")
+        {
+            m_WebSocket->sendTextMessage("pong");
+        }
+        else
+        {
+         //   m_WebSocket->sendTextMessage(data);
+            requestHandler->websocketTextMessage( m_WebSocket, data );
+        }
+        /*Reload read timeout*/
+        int readTimeout=settings->value("readTimeout",10000).toInt();
+        readTimer.start(readTimeout);
     }
-    else
+    catch (...)
     {
-        m_WebSocket->sendTextMessage(data);
+        qCritical("HttpConnectionHandler (%p): An uncatched exception occured in the request handler",this);
     }
-    /*Reload read timeout*/
-    int readTimeout=settings->value("readTimeout",10000).toInt();
-    readTimer.start(readTimeout);
-  //  qDebug() << "Websocket: Reload timeout";
+    //  qDebug() << "Websocket: Reload timeout";
+}
+
+void HttpConnectionHandler::websocketbinaryFrameReceived(const QByteArray& data, bool final )
+{
+    qDebug() << "Websocket Bynary Message:";
+    // Call the request mapper
+    try
+    {
+        requestHandler->websocketbinaryFrameReceived( m_WebSocket, data, final );
+        /*Reload read timeout*/
+        int readTimeout=settings->value("readTimeout",10000).toInt();
+        readTimer.start(readTimeout);
+    }
+    catch (...)
+    {
+        qCritical("HttpConnectionHandler (%p): An uncatched exception occured in the request handler",this);
+    }
 }

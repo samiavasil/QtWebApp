@@ -9,7 +9,7 @@
 #include "httpglobal.h"
 #include "httprequest.h"
 #include "httpresponse.h"
-
+#include"qwebsocket.h"
 namespace stefanfrings {
 
 /**
@@ -45,7 +45,8 @@ public:
       @warning This method must be thread safe
     */
     virtual void service(HttpRequest& request, HttpResponse& response);
-
+    virtual void websocketTextMessage( QWebSocket* ws, const QString & data);
+    virtual void websocketbinaryFrameReceived( QWebSocket* ws, const QByteArray& data, bool final );
 };
 
 } // end of namespace

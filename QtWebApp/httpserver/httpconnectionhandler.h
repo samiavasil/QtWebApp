@@ -16,8 +16,7 @@
 #include "httpglobal.h"
 #include "httprequest.h"
 #include "httprequesthandler.h"
-
-class QWebSocket;
+#include "qwebsocket.h"
 
 namespace stefanfrings {
 
@@ -129,7 +128,9 @@ private slots:
     /** Received from the socket when incoming data can be read */
     void read();
 
-    void websocketRead(const QString &data);
+    void websocketTextMessage(const QString &data);
+
+    void websocketbinaryFrameReceived(const QByteArray &data, bool final );
 
     /** Received from the socket when a connection has been closed */
     void disconnected();

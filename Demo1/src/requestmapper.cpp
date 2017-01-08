@@ -1,4 +1,4 @@
-/**
+﻿/**
   @file
   @author Stefan Frings
 */
@@ -78,4 +78,17 @@ void RequestMapper::service(HttpRequest& request, HttpResponse& response)
     {
        logger->clear();
     }
+}
+
+void RequestMapper::websocketTextMessage(QWebSocket *ws, const QString &data)
+{
+    ws->sendTextMessage(data);
+}
+
+void RequestMapper::websocketbinaryFrameReceived(QWebSocket *ws, const QByteArray &data, bool final)
+{
+    qCritical("DEMO1 HttpRequestHandler:  websocketbinaryFrameReceived TBI");
+    qDebug("DEMO1 HttpRequestHandler:websocketbinaryFrameReceived TBI");
+    if( final || !final )/*Remove warning*/
+        ws->sendBinaryMessage(data);
 }

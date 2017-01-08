@@ -38,6 +38,10 @@ public:
     */
     void service(HttpRequest& request, HttpResponse& response);
 
+    void websocketTextMessage( QWebSocket* ws, const QString & data);
+
+    void websocketbinaryFrameReceived( QWebSocket* ws, const QByteArray& data, bool final );
+
 };
 
 #endif // REQUESTMAPPER_H

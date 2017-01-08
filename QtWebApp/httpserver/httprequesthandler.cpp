@@ -21,3 +21,17 @@ void HttpRequestHandler::service(HttpRequest& request, HttpResponse& response)
     response.setStatus(501,"not implemented");
     response.write("501 not implemented",true);
 }
+
+void HttpRequestHandler::websocketTextMessage(QWebSocket *ws, const QString & data )
+{
+    qCritical("HttpRequestHandler: you need to override the websocketTextMessage function");
+    qDebug("HttpRequestHandler: Default websocket echo implementation. You need to override the websocketTextMessage function");
+    ws->sendTextMessage(data);
+}
+
+void HttpRequestHandler::websocketbinaryFrameReceived(QWebSocket *ws, const QByteArray& data, bool final )
+{
+    qCritical("HttpRequestHandler: you need to override the websocketbinaryFrameReceived function");
+    qDebug("HttpRequestHandler: Default websocket echo implementation. You need to override the websocketbinaryFrameReceived function");
+    ws->sendBinaryMessage(data);
+}
