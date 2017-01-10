@@ -80,9 +80,23 @@ void RequestMapper::service(HttpRequest& request, HttpResponse& response)
     }
 }
 
+QTcpSocket* serviceConnection;
+
 void RequestMapper::websocketTextMessage(QWebSocket *ws, const QString &data)
 {
+    int t = 123;
     ws->sendTextMessage(data);
+    switch(  t ){
+    case 0:{
+        serviceConnection = new QTcpSocket(this);
+        break;
+    }
+
+    default:{
+
+        break;
+    }
+    }
 }
 
 void RequestMapper::websocketbinaryFrameReceived(QWebSocket *ws, const QByteArray &data, bool final)

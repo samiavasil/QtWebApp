@@ -9,8 +9,14 @@
 
 using namespace stefanfrings;
 
-HttpConnectionHandler::HttpConnectionHandler(QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration)
-    : QThread(),m_type(UNDEFINED),m_serverName("Websocket Test Server"),socket(NULL),m_WebSocket(NULL)
+HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration, QObject *parent )
+    :
+#if defined(HANDLER_THREADING)
+      QThread(),
+#else
+      QObject(parent),
+#endif
+      m_type(UNDEFINED),m_serverName("Websocket Test Server"),socket(NULL),m_WebSocket(NULL)
 {
     Q_ASSERT(settings!=0);
     Q_ASSERT(requestHandler!=0);
@@ -24,22 +30,31 @@ HttpConnectionHandler::HttpConnectionHandler(QSettings* settings, HttpRequestHan
     createSocket();
 
     // execute signals in my own thread
+#if defined(HANDLER_THREADING)
     moveToThread(this);
     socket->moveToThread(this);
     readTimer.moveToThread(this);
-
+#endif
     connect(&readTimer, SIGNAL(timeout()), SLOT(readTimeout()));
     readTimer.setSingleShot(true);
 
     qDebug("HttpConnectionHandler (%p): constructed", this);
+#if defined(HANDLER_THREADING)
     this->start();
+#else
+
+#endif
 }
 
 
 HttpConnectionHandler::~HttpConnectionHandler()
 {
+#if defined(HANDLER_THREADING)
     quit();
     wait();
+#else
+
+#endif
     qDebug("HttpConnectionHandler (%p) type (%d): destroyed", this, m_type);
 }
 
@@ -79,6 +94,7 @@ void HttpConnectionHandler::createSocket()
 void HttpConnectionHandler::run()
 {
     qDebug("HttpConnectionHandler (%p): thread started", this);
+#if defined(HANDLER_THREADING)
     try
     {
         exec();
@@ -91,6 +107,9 @@ void HttpConnectionHandler::run()
     delete socket;
     readTimer.stop();
     qDebug("HttpConnectionHandler (%p): thread stopped", this);
+#else
+
+#endif
 }
 
 void HttpConnectionHandler::preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator)

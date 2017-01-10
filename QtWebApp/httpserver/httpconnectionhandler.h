@@ -47,7 +47,13 @@ namespace stefanfrings {
   The readTimeout value defines the maximum time to wait for a complete HTTP request.
   @see HttpRequest for description of config settings maxRequestSize and maxMultiPartSize.
 */
-class DECLSPEC HttpConnectionHandler : public QThread {
+class DECLSPEC HttpConnectionHandler :
+#if defined(HANDLER_THREADING)
+        public QThread
+#else
+        public QObject
+#endif
+{
     Q_OBJECT
     Q_DISABLE_COPY(HttpConnectionHandler)
 
@@ -59,7 +65,7 @@ public:
       @param requestHandler Handler that will process each incoming HTTP request
       @param sslConfiguration SSL (HTTPS) will be used if not NULL
     */
-    HttpConnectionHandler(QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration=NULL);
+    HttpConnectionHandler(QSettings* settings, HttpRequestHandler* requestHandler,QSslConfiguration* sslConfiguration=NULL,QObject *parent = Q_NULLPTR );
 
     /** Destructor */
     virtual ~HttpConnectionHandler();
