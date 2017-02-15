@@ -31,24 +31,21 @@
         if (window.WebSocket) {      
         console.log("WebSocket object is supported in your browser");
         }
-        for( var i=0; i < 1010;i++){
-            
-            websocket = new WebSocket( $("#target").val() );
+        websocket = new WebSocket( $("#target").val() );
 
-            websocket.onopen = function (evt) {
-                onOpen(evt)
-                evt.currentTarget.pingWs = setInterval(function (ws) { doPing(ws) }, 10000, evt.currentTarget );
-            };
-            websocket.onclose = function (evt) {
-                onClose(evt)
-            };
-            websocket.onmessage = function (evt) {
-                onMessage(evt)
-            };
-            websocket.onerror = function (evt) {
-                onError(evt)
-            };
-        }
+        websocket.onopen = function (evt) {
+            onOpen(evt)
+            evt.currentTarget.pingWs = setInterval(function (ws) { doPing(ws) }, 10000, evt.currentTarget );
+        };
+        websocket.onclose = function (evt) {
+            onClose(evt)
+        };
+        websocket.onmessage = function (evt) {
+            onMessage(evt)
+        };
+        websocket.onerror = function (evt) {
+            onError(evt)
+        };
       }
       
       function getClientById( Id ) {
