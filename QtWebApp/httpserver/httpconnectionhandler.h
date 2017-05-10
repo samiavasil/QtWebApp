@@ -58,7 +58,15 @@ class DECLSPEC HttpConnectionHandler :
     Q_DISABLE_COPY(HttpConnectionHandler)
 
 public:
-
+    typedef enum{
+        IDLE,
+        CONNECT_HANDSHAKE,
+        HTTP_GET_REQUEST,
+        HTTP_HANDLE_REQUEST,
+        WEBSOCKET_HANDLING,
+        HTTP_ABORT,
+        CLOSE_CONNECTION,
+    } HttpConnectionState;
     /**
       Constructor.
       @param settings Configuration settings of the HTTP webserver
@@ -110,6 +118,8 @@ private:
     /** Configuration for SSL */
     QSslConfiguration* sslConfiguration;
 
+    HttpConnectionState m_State;
+
     /** Executes the threads own event loop */
     void run();
 
@@ -118,6 +128,8 @@ private:
 
     bool websocketHandshake(QTcpSocket *pTcpSocket);
 
+signals:
+    void dellMeTestSignal();
 public slots:
 
     /**
@@ -126,6 +138,12 @@ public slots:
     */
     void handleConnection(tSocketDescriptor socketDescriptor);
 
+protected:
+    HttpConnectionHandler::HttpConnectionState handleHttpRequest();
+
+    HttpConnectionState readHttpRequest();
+
+    HttpConnectionHandler::HttpConnectionState httpAbort();
 private slots:
 
     /** Received from the socket when a read-timeout occured */
@@ -141,7 +159,6 @@ private slots:
     /** Received from the socket when a connection has been closed */
     void disconnected();
 
-    void readHttp();
     void preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator);
     void encrypted();
     void sslErrors(const QList<QSslError> &errors);
