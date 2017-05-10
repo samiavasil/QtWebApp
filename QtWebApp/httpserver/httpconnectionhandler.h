@@ -109,6 +109,8 @@ private:
     /** Storage for the current incoming HTTP request */
     HttpRequest* currentRequest;
 
+    HttpResponse* currentResponse;
+
     /** Dispatches received requests to services */
     HttpRequestHandler* requestHandler;
 
@@ -139,9 +141,9 @@ public slots:
     void handleConnection(tSocketDescriptor socketDescriptor);
 
 protected:
-    HttpConnectionHandler::HttpConnectionState handleHttpRequest();
-
     HttpConnectionState readHttpRequest();
+
+    HttpConnectionHandler::HttpConnectionState handleHttpRequest();
 
     HttpConnectionHandler::HttpConnectionState httpAbort();
 private slots:
@@ -150,7 +152,7 @@ private slots:
     void readTimeout();
 
     /** Received from the socket when incoming data can be read */
-    void read();
+    void handlerSM();
 
     void websocketTextMessage(const QString &data);
 

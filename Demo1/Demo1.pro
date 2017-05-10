@@ -3,8 +3,9 @@
 
 TARGET = Demo1
 TEMPLATE = app
-QT = core network
+QT = core network concurrent
 CONFIG += console
+
 
 HEADERS += \
            src/requestmapper.h \

@@ -28,7 +28,11 @@ class DECLSPEC HttpRequestHandler : public QObject {
     Q_OBJECT
     Q_DISABLE_COPY(HttpRequestHandler)
 public:
-
+    typedef enum{
+      FINISHED,
+      WAIT,
+      ERROR
+    } ReqHandle_t;
     /**
      * Constructor.
      * @param parent Parent object.
@@ -42,11 +46,19 @@ public:
       Generate a response for an incoming HTTP request.
       @param request The received HTTP request
       @param response Must be used to return the response
-      @warning This method must be thread safe
+      @return  FINISHED - if handling is synchnonous and finish successfully
+               WAIT  - if handling is assynchronous and service should be called again,
+               in order to check finish status. For example if this service handler run some thread,
+               in order to do some asynchronous work, then service handler should return WAIT. After that
+               this handler will be called again to check for work finish and if it is  it will return status FINISHED.
+               ERROR - On error
     */
-    virtual void service(HttpRequest& request, HttpResponse& response);
+    virtual ReqHandle_t service(HttpRequest& request, HttpResponse& response);
     virtual void websocketTextMessage( QWebSocket* ws, const QString & data);
     virtual void websocketbinaryFrameReceived( QWebSocket* ws, const QByteArray& data, bool final );
+signals:
+    void AsyncEvent();
+
 };
 
 } // end of namespace

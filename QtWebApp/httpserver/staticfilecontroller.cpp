@@ -37,7 +37,7 @@ StaticFileController::StaticFileController(QSettings* settings, QObject* parent)
 }
 
 
-void StaticFileController::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t StaticFileController::service(HttpRequest& request, HttpResponse& response)
 {
     QByteArray path=request.getPath();
     // Check if we have the file in cache
@@ -65,7 +65,7 @@ void StaticFileController::service(HttpRequest& request, HttpResponse& response)
             qWarning("StaticFileController: detected forbidden characters in path %s",path.data());
             response.setStatus(403,"forbidden");
             response.write("403 forbidden",true);
-            return;
+            return HttpRequestHandler::ERROR;
         }
         // If the filename is a directory, append index.html.
         if (QFileInfo(docroot+path).isDir())
@@ -119,6 +119,7 @@ void StaticFileController::service(HttpRequest& request, HttpResponse& response)
             }
         }
     }
+    return HttpRequestHandler::FINISHED;
 }
 
 void StaticFileController::setContentType(QString fileName, HttpResponse& response) const

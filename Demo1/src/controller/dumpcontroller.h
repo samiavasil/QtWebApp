@@ -25,7 +25,7 @@ public:
     DumpController();
 
     /** Generates the response */
-    void service(HttpRequest& request, HttpResponse& response);
+    ReqHandle_t service(HttpRequest& request, HttpResponse& response);
 };
 
 #endif // DUMPCONTROLLER_H

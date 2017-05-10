@@ -13,7 +13,7 @@ extern HttpSessionStore* sessionStore;
 SessionController::SessionController()
 {}
 
-void SessionController::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t SessionController::service(HttpRequest& request, HttpResponse& response)
 {
 
     response.setHeader("Content-Type", "text/html; charset=ISO-8859-1");
@@ -32,5 +32,5 @@ void SessionController::service(HttpRequest& request, HttpResponse& response)
         response.write(startTime.toString().toLatin1());
         response.write("</body></html>");
     }
-
+    return HttpRequestHandler::FINISHED;
 }

@@ -7,11 +7,7 @@
 #include "requestmapper.h"
 #include "filelogger.h"
 #include "staticfilecontroller.h"
-#include "controller/dumpcontroller.h"
-#include "controller/templatecontroller.h"
-#include "controller/formcontroller.h"
-#include "controller/fileuploadcontroller.h"
-#include "controller/sessioncontroller.h"
+
 
 /** Redirects log messages to a file */
 extern FileLogger* logger;
@@ -23,6 +19,7 @@ RequestMapper::RequestMapper(QObject* parent)
     :HttpRequestHandler(parent)
 {
     qDebug("RequestMapper: created");
+    connect(&m_FileUploadController,SIGNAL(AsyncEvent()),this,SIGNAL(AsyncEvent()));
 }
 
 
@@ -32,8 +29,9 @@ RequestMapper::~RequestMapper()
 }
 
 
-void RequestMapper::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t RequestMapper::service(HttpRequest& request, HttpResponse& response)
 {
+    HttpRequestHandler::ReqHandle_t ret = HttpRequestHandler::ERROR;
     QByteArray path=request.getPath();
     qDebug("RequestMapper: path=%s",path.data());
 
@@ -41,34 +39,34 @@ void RequestMapper::service(HttpRequest& request, HttpResponse& response)
 
     if (path.startsWith("/dump"))
     {
-        DumpController().service(request, response);
+        ret = m_DumpController.service(request, response);
     }
 
     else if (path.startsWith("/template"))
     {
-        TemplateController().service(request, response);
+        ret = m_TemplateController.service(request, response);
     }
 
     else if (path.startsWith("/form"))
     {
-        FormController().service(request, response);
+        ret = m_FormController.service(request, response);
     }
 
     else if (path.startsWith("/file"))
     {
-        FileUploadController().service(request, response);
+        ret = m_FileUploadController.service(request, response);
     }
 
     else if (path.startsWith("/session"))
     {
-        SessionController().service(request, response);
+        ret = m_SessionController.service(request, response);
     }
 
     // All other pathes are mapped to the static file controller.
     // In this case, a single instance is used for multiple requests.
     else
     {
-        staticFileController->service(request, response);
+        ret = staticFileController->service(request, response);
     }
 
     qDebug("RequestMapper: finished request");
@@ -78,6 +76,7 @@ void RequestMapper::service(HttpRequest& request, HttpResponse& response)
     {
        logger->clear();
     }
+    return ret;
 }
 
 QTcpSocket* serviceConnection;

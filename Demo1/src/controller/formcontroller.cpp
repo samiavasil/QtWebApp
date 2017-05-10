@@ -8,7 +8,7 @@
 FormController::FormController()
 {}
 
-void FormController::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t FormController::service(HttpRequest& request, HttpResponse& response)
 {
 
     response.setHeader("Content-Type", "text/html; charset=ISO-8859-1");
@@ -33,5 +33,6 @@ void FormController::service(HttpRequest& request, HttpResponse& response)
         response.write("</form>");
         response.write("</body></html>",true);
     }
+    return HttpRequestHandler::FINISHED;
 }
 

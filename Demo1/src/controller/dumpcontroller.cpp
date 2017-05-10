@@ -10,7 +10,7 @@
 DumpController::DumpController()
 {}
 
-void DumpController::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t DumpController::service(HttpRequest& request, HttpResponse& response)
 {
 
     response.setHeader("Content-Type", "text/html; charset=ISO-8859-1");
@@ -64,4 +64,5 @@ void DumpController::service(HttpRequest& request, HttpResponse& response)
 
     body.append("</body></html>");
     response.write(body,true);
+    return HttpRequestHandler::FINISHED;
 }

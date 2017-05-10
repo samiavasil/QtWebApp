@@ -14,12 +14,13 @@ HttpRequestHandler::HttpRequestHandler(QObject* parent)
 HttpRequestHandler::~HttpRequestHandler()
 {}
 
-void HttpRequestHandler::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t HttpRequestHandler::service(HttpRequest& request, HttpResponse& response)
 {
     qCritical("HttpRequestHandler: you need to override the service() function");
     qDebug("HttpRequestHandler: request=%s %s %s",request.getMethod().data(),request.getPath().data(),request.getVersion().data());
     response.setStatus(501,"not implemented");
     response.write("501 not implemented",true);
+    return FINISHED;
 }
 
 void HttpRequestHandler::websocketTextMessage(QWebSocket *ws, const QString & data )

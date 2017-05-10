@@ -7,6 +7,13 @@
 #define REQUESTMAPPER_H
 
 #include "httprequesthandler.h"
+#include "staticfilecontroller.h"
+#include "controller/dumpcontroller.h"
+#include "controller/templatecontroller.h"
+#include "controller/formcontroller.h"
+#include "controller/fileuploadcontroller.h"
+#include "controller/sessioncontroller.h"
+
 
 using namespace stefanfrings;
 
@@ -36,11 +43,18 @@ public:
       @param request The received HTTP request
       @param response Must be used to return the response
     */
-    void service(HttpRequest& request, HttpResponse& response);
+    ReqHandle_t service(HttpRequest& request, HttpResponse& response);
 
     void websocketTextMessage( QWebSocket* ws, const QString & data);
 
     void websocketbinaryFrameReceived( QWebSocket* ws, const QByteArray& data, bool final );
+
+protected:
+    DumpController        m_DumpController;
+    TemplateController    m_TemplateController;
+    FormController        m_FormController;
+    FileUploadController  m_FileUploadController;
+    SessionController     m_SessionController;
 
 };
 

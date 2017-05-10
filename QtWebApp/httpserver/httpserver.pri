@@ -6,7 +6,7 @@ QT += network
 
 # Enable very detailed debug messages when compiling the debug version
 CONFIG(debug, debug|release) {
-    DEFINES += SUPERVERBOSE
+#    DEFINES += SUPERVERBOSE
 }
 
 HEADERS += $$PWD/httpglobal.h \

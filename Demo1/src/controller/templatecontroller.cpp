@@ -13,7 +13,7 @@ extern TemplateCache* templateCache;
 TemplateController::TemplateController()
 {}
 
-void TemplateController::service(HttpRequest& request, HttpResponse& response)
+HttpRequestHandler::ReqHandle_t TemplateController::service(HttpRequest& request, HttpResponse& response)
 {
     response.setHeader("Content-Type", "text/html; charset=ISO-8859-1");
 
@@ -34,4 +34,5 @@ void TemplateController::service(HttpRequest& request, HttpResponse& response)
     }
 
     response.write(t.toLatin1(),true);
+    return HttpRequestHandler::FINISHED;
 }
