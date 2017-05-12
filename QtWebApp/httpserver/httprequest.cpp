@@ -20,7 +20,6 @@ HttpRequest::HttpRequest(QSettings* settings)
     tempFile=NULL;
 }
 
-
 void HttpRequest::readRequest(QTcpSocket* socket)
 {
     #ifdef SUPERVERBOSE
@@ -302,7 +301,7 @@ void HttpRequest::readFromSocket(QTcpSocket* socket)
     {
         readBody(socket);
     }
-    if ((boundary.isEmpty() && currentSize>maxSize) || (!boundary.isEmpty() && currentSize>maxMultiPartSize))
+    if ((boundary.isEmpty() && currentSize > maxSize) || (!boundary.isEmpty() && currentSize>maxMultiPartSize))
     {
         qWarning("HttpRequest: received too many bytes");
         status=abort;
@@ -400,7 +399,7 @@ QByteArray HttpRequest::urlDecode(const QByteArray source)
     return buffer;
 }
 
-
+/*Todo - move this in some thread worker*/
 void HttpRequest::parseMultiPartFile()
 {
     qDebug("HttpRequest: parsing multipart temp file");

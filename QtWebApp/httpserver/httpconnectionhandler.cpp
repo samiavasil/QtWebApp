@@ -136,7 +136,7 @@ void HttpConnectionHandler::encrypted()
 #if defined SUPERVERBOSE
     qDebug() << "SSL ENCRYPTED!!!!!!!!!!!!!!";
 #endif
-    connect(sslSocket, SIGNAL(readyRead()), SLOT(handlerSM()));
+    connect(sslSocket, SIGNAL(readyRead()), SLOT(handlerSM()), Qt::QueuedConnection);
     connect(sslSocket, SIGNAL(disconnected()), SLOT(disconnected()), Qt::QueuedConnection );
 }
 
@@ -189,7 +189,7 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
     else
     {
         // Connect signals
-        connect(socket, SIGNAL(readyRead()), this,SLOT(handlerSM()));
+        connect(socket, SIGNAL(readyRead()), this,SLOT(handlerSM()), Qt::QueuedConnection);
         connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
     }
     //DEL ME:: TODO just for test
@@ -336,20 +336,16 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
 HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpRequest()
 {
     // The loop adds support for HTTP pipelinig
-    while (socket->bytesAvailable())
+   // while (socket->bytesAvailable())
     {
         #ifdef SUPERVERBOSE
             qDebug("HttpConnectionHandler (%p): read input",this);
         #endif
 
-        // Create new HttpRequest object if necessary
-        if (!currentRequest)
-        {
-            currentRequest=new HttpRequest(settings);
-        }
+
 
         // Collect data for the request object
-        while (socket->bytesAvailable() && currentRequest->getStatus()!=HttpRequest::complete && currentRequest->getStatus()!=HttpRequest::abort)
+        if /*while*/(  socket->bytesAvailable() && currentRequest->getStatus()!=HttpRequest::complete && currentRequest->getStatus()!=HttpRequest::abort)
         {
             currentRequest->readFromSocket(socket);
             if (currentRequest->getStatus()==HttpRequest::waitForBody)
@@ -358,6 +354,7 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpReques
                 // expire during large file uploads.
                 int readTimeout=settings->value("readTimeout",10000).toInt();
                 readTimer.start(readTimeout);
+                return HTTP_GET_REQUEST;
             }
         }
 
@@ -372,6 +369,10 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpReques
             qDebug("HttpConnectionHandler (%p): received request",this);
             return HTTP_HANDLE_REQUEST;
         }
+    }
+    if( socket->bytesAvailable() )
+    {
+        emit dellMeTestSignal();
     }
     return HTTP_GET_REQUEST;
 
@@ -510,6 +511,14 @@ void HttpConnectionHandler::handlerSM()
             else
             {
                 m_type  = HTTP;
+                // Create new HttpRequest object if necessary
+                if (currentRequest)
+                {
+                   delete currentRequest;
+                   currentRequest = 0;
+                }
+                currentRequest=new HttpRequest(settings);
+
                 m_State = readHttpRequest();
                 if(m_State == HTTP_HANDLE_REQUEST ){
                     emit dellMeTestSignal();
@@ -518,6 +527,10 @@ void HttpConnectionHandler::handlerSM()
             break;
         }
         case HTTP_GET_REQUEST:{
+            if (!currentRequest)
+            {
+               currentRequest=new HttpRequest(settings);
+            }
             m_State = readHttpRequest();
             if(m_State == HTTP_HANDLE_REQUEST ){
                 emit dellMeTestSignal();
