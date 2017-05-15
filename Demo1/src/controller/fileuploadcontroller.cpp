@@ -47,24 +47,6 @@ FileUploadController::FileUploadController()
      m_Finished   = false;
 }
 
-void Function( HttpRequest* request, HttpResponse* response)
-{
-    response->setHeader("Content-Type", "image/jpeg");
-    QTemporaryFile* file=request->getUploadedFile("file1");
-    qDebug() << "FileName: " << file->fileName();
-    if (file)
-    {
-        while (!file->atEnd() && !file->error())
-        {
-            QByteArray buffer=file->read(65536);
-            response->write(buffer);
-        }
-    }
-    else
-    {
-        response->write("upload failed");
-    }
-}
 
 void FileUploadController::finished()
 {
@@ -105,7 +87,6 @@ HttpRequestHandler::ReqHandle_t FileUploadController::service(HttpRequest& reque
             connect( m_CurrentTask,SIGNAL(finished()),this, SLOT(finished()) );
             connect( m_CurrentTask,SIGNAL(write(QSharedPointer<QByteArray>)),this, SLOT(write(QSharedPointer<QByteArray>)) );
             m_CurrentTask->start();
-            //Function( &request, &response);
             m_Finished = false;
             state = 1;
             ret = HttpRequestHandler::WAIT;

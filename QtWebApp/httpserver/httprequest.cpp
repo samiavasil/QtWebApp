@@ -7,11 +7,13 @@
 #include <QList>
 #include <QDir>
 #include "httpcookie.h"
+#include "asynchronoustaskrunner.h"
 
 using namespace stefanfrings;
 
 HttpRequest::HttpRequest(QSettings* settings)
 {
+    m_MultiPartFileTaskRunner = NULL;
     status=waitForRequest;
     currentSize=0;
     expectedBodySize=0;
@@ -20,8 +22,9 @@ HttpRequest::HttpRequest(QSettings* settings)
     tempFile=NULL;
 }
 
-void HttpRequest::readRequest(QTcpSocket* socket)
+bool HttpRequest::readRequest(QTcpSocket* socket)
 {
+
     #ifdef SUPERVERBOSE
         qDebug("HttpRequest: read request");
     #endif
@@ -33,7 +36,7 @@ void HttpRequest::readRequest(QTcpSocket* socket)
         #ifdef SUPERVERBOSE
             qDebug("HttpRequest: collecting more parts until line break");
         #endif
-        return;
+        return true;
     }
     QByteArray newData=lineBuffer.trimmed();
     lineBuffer.clear();
@@ -53,9 +56,10 @@ void HttpRequest::readRequest(QTcpSocket* socket)
             status=waitForHeader;
         }
     }
+    return false;
 }
 
-void HttpRequest::readHeader(QTcpSocket* socket)
+bool HttpRequest::readHeader(QTcpSocket* socket)
 {
     #ifdef SUPERVERBOSE
         qDebug("HttpRequest: read header");
@@ -68,7 +72,7 @@ void HttpRequest::readHeader(QTcpSocket* socket)
         #ifdef SUPERVERBOSE
             qDebug("HttpRequest: collecting more parts until line break");
         #endif
-        return;
+        return true;
     }
     QByteArray newData=lineBuffer.trimmed();
     lineBuffer.clear();
@@ -143,10 +147,12 @@ void HttpRequest::readHeader(QTcpSocket* socket)
             status=waitForBody;
         }
     }
+    return false;
 }
 
-void HttpRequest::readBody(QTcpSocket* socket)
+bool HttpRequest::readBody(QTcpSocket* socket)
 {
+    bool Ret = true;
     Q_ASSERT(expectedBodySize!=0);
     if (boundary.isEmpty())
     {
@@ -161,6 +167,7 @@ void HttpRequest::readBody(QTcpSocket* socket)
         if (bodyData.size()>=expectedBodySize)
         {
             status=complete;
+            Ret = false;
         }
     }
     else
@@ -190,6 +197,7 @@ void HttpRequest::readBody(QTcpSocket* socket)
         {
             qWarning("HttpRequest: received too many multipart bytes");
             status=abort;
+            Ret = false;
         }
         else if (fileSize>=expectedBodySize)
         {
@@ -201,11 +209,14 @@ void HttpRequest::readBody(QTcpSocket* socket)
             {
                 qCritical("HttpRequest: Error writing temp file for multipart body");
             }
-            parseMultiPartFile();
-            tempFile->close();
-            status=complete;
+            if( !parseMultiPartFile() ){
+                tempFile->close();
+                status=complete;
+                Ret = false;
+            }
         }
     }
+    return Ret;
 }
 
 void HttpRequest::decodeRequestParams()
@@ -286,20 +297,21 @@ void HttpRequest::extractCookies()
     headers.remove("cookie");
 }
 
-void HttpRequest::readFromSocket(QTcpSocket* socket)
+bool HttpRequest::readFromSocket(QTcpSocket* socket)
 {
+    bool Ret = false;
     Q_ASSERT(status!=complete);
     if (status==waitForRequest)
     {
-        readRequest(socket);
+        Ret = readRequest(socket);
     }
     else if (status==waitForHeader)
     {
-        readHeader(socket);
+        Ret = readHeader(socket);
     }
     else if (status==waitForBody)
     {
-        readBody(socket);
+        Ret = readBody(socket);
     }
     if ((boundary.isEmpty() && currentSize > maxSize) || (!boundary.isEmpty() && currentSize>maxMultiPartSize))
     {
@@ -313,6 +325,7 @@ void HttpRequest::readFromSocket(QTcpSocket* socket)
         // Extract cookies from headers
         extractCookies();
     }
+    return Ret;
 }
 
 
@@ -399,17 +412,37 @@ QByteArray HttpRequest::urlDecode(const QByteArray source)
     return buffer;
 }
 
-/*Todo - move this in some thread worker*/
-void HttpRequest::parseMultiPartFile()
+
+
+class MultiPartFilePatseTask: public Task{
+public:
+    MultiPartFilePatseTask( QTemporaryFile* tFile,
+          const QByteArray& bound,
+          QMultiMap<QByteArray, QByteArray>& params,
+          QMap<QByteArray,QTemporaryFile*>& upFiles,
+          int& Size):Task(),tempFile(tFile), boundary(bound),parameters(params),uploadedFiles(upFiles),currentSize(Size)
+    {
+
+    }
+
+protected:
+    QTemporaryFile* tempFile;
+    const QByteArray& boundary;
+    QMultiMap<QByteArray,QByteArray>& parameters;
+    QMap<QByteArray,QTemporaryFile*>& uploadedFiles;
+    int& currentSize;
+public:
+bool RunTask()
 {
+
     qDebug("HttpRequest: parsing multipart temp file");
     tempFile->seek(0);
     bool finished=false;
     while (!tempFile->atEnd() && !finished && !tempFile->error())
     {
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: reading multpart headers");
-        #endif
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: reading multpart headers");
+#endif
         QByteArray fieldName;
         QByteArray fileName;
         while (!tempFile->atEnd() && !finished && !tempFile->error())
@@ -431,9 +464,9 @@ void HttpRequest::parseMultiPartFile()
                     {
                         fileName=line.mid(start+11,end-start-11);
                     }
-                    #ifdef SUPERVERBOSE
-                        qDebug("HttpRequest: multipart field=%s, filename=%s",fieldName.data(),fileName.data());
-                    #endif
+#ifdef SUPERVERBOSE
+                    qDebug("HttpRequest: multipart field=%s, filename=%s",fieldName.data(),fileName.data());
+#endif
                 }
                 else
                 {
@@ -446,9 +479,9 @@ void HttpRequest::parseMultiPartFile()
             }
         }
 
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: reading multpart data");
-        #endif
+#ifdef SUPERVERBOSE
+        qDebug("HttpRequest: reading multpart data");
+#endif
         QTemporaryFile* uploadedFile=0;
         QByteArray fieldValue;
         while (!tempFile->atEnd() && !finished && !tempFile->error())
@@ -468,9 +501,9 @@ void HttpRequest::parseMultiPartFile()
                 else if (!fileName.isEmpty() && !fieldName.isEmpty())
                 {
                     // last field was a file
-                    #ifdef SUPERVERBOSE
-                        qDebug("HttpRequest: finishing writing to uploaded file");
-                    #endif
+#ifdef SUPERVERBOSE
+                    qDebug("HttpRequest: finishing writing to uploaded file");
+#endif
                     uploadedFile->resize(uploadedFile->size()-2);
                     uploadedFile->flush();
                     uploadedFile->seek(0);
@@ -514,9 +547,29 @@ void HttpRequest::parseMultiPartFile()
     {
         qCritical("HttpRequest: cannot read temp file, %s",qPrintable(tempFile->errorString()));
     }
-    #ifdef SUPERVERBOSE
-        qDebug("HttpRequest: finished parsing multipart temp file");
-    #endif
+#ifdef SUPERVERBOSE
+    qDebug("HttpRequest: finished parsing multipart temp file");
+#endif
+    return false;
+}
+};
+
+
+/*Todo - move this in some thread worker*/
+bool HttpRequest::parseMultiPartFile()
+{
+    bool Ret = true;
+    if( 0 == m_MultiPartFileTaskRunner ){
+        m_MultiPartFileTaskRunner = new AsynchronousTaskRunner( new MultiPartFilePatseTask(tempFile , boundary ,parameters ,uploadedFiles ,currentSize ) );
+        m_MultiPartFileTaskRunner->StartRun();
+    }
+
+    Ret = m_MultiPartFileTaskRunner->IsRunning();
+    if( !Ret ){
+        m_MultiPartFileTaskRunner->deleteLater();
+        m_MultiPartFileTaskRunner = 0;
+    }
+    return Ret;
 }
 
 HttpRequest::~HttpRequest()
@@ -537,6 +590,9 @@ HttpRequest::~HttpRequest()
             tempFile->close();
         }
         delete tempFile;
+    }
+    if( m_MultiPartFileTaskRunner != NULL ){
+        delete m_MultiPartFileTaskRunner;
     }
 }
 

@@ -36,7 +36,7 @@ StaticFileController::StaticFileController(QSettings* settings, QObject* parent)
     qDebug("StaticFileController: cache timeout=%i, size=%i",cacheTimeout,cache.maxCost());
 }
 
-
+/*TODO: Fix this response.write !!!! Remove mutex - All calls will be in event driven main task*/
 HttpRequestHandler::ReqHandle_t StaticFileController::service(HttpRequest& request, HttpResponse& response)
 {
     QByteArray path=request.getPath();

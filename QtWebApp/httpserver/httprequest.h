@@ -16,6 +16,8 @@
 #include <QUuid>
 #include "httpglobal.h"
 
+
+class AsynchronousTaskRunner;
 namespace stefanfrings {
 
 /**
@@ -61,7 +63,7 @@ public:
       until the status is RequestStatus::complete or RequestStatus::abort.
       @param socket Source of the data
     */
-    void readFromSocket(QTcpSocket* socket);
+    bool readFromSocket(QTcpSocket* socket);
 
     /**
       Get the status of this reqeust.
@@ -208,20 +210,22 @@ private:
     /** Boundary of multipart/form-data body. Empty if there is no such header */
     QByteArray boundary;
 
+    AsynchronousTaskRunner* m_MultiPartFileTaskRunner;
+
     /** Temp file, that is used to store the multipart/form-data body */
     QTemporaryFile* tempFile;
 
     /** Parse the multipart body, that has been stored in the temp file. */
-    void parseMultiPartFile();
+    bool parseMultiPartFile();
 
     /** Sub-procedure of readFromSocket(), read the first line of a request. */
-    void readRequest(QTcpSocket* socket);
+    bool readRequest(QTcpSocket* socket);
 
     /** Sub-procedure of readFromSocket(), read header lines. */
-    void readHeader(QTcpSocket* socket);
+    bool readHeader(QTcpSocket* socket);
 
     /** Sub-procedure of readFromSocket(), read the request body. */
-    void readBody(QTcpSocket* socket);
+    bool readBody(QTcpSocket* socket);
 
     /** Sub-procedure of readFromSocket(), extract and decode request parameters. */
     void decodeRequestParams();

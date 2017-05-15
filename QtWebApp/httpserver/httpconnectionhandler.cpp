@@ -347,7 +347,9 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpReques
         // Collect data for the request object
         if /*while*/(  socket->bytesAvailable() && currentRequest->getStatus()!=HttpRequest::complete && currentRequest->getStatus()!=HttpRequest::abort)
         {
-            currentRequest->readFromSocket(socket);
+            if( currentRequest->readFromSocket(socket) ){
+                return HTTP_GET_REQUEST;
+            }
             if (currentRequest->getStatus()==HttpRequest::waitForBody)
             {
                 // Restart timer for read timeout, otherwise it would
