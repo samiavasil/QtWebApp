@@ -6,9 +6,11 @@
 #endif
 #include <QDir>
 #include "httpconnectionhandlerpool.h"
+#include<QTimer>
+#include<QSettings>
 
 using namespace stefanfrings;
-
+#define HANDLER_TIME 10
 HttpConnectionHandlerPool::HttpConnectionHandlerPool(QSettings* settings, HttpRequestHandler* requestHandler)
     : QObject()
 {
@@ -19,6 +21,7 @@ HttpConnectionHandlerPool::HttpConnectionHandlerPool(QSettings* settings, HttpRe
     loadSslConfig();
     cleanupTimer.start(settings->value("cleanupInterval",1000).toInt());
     connect(&cleanupTimer, SIGNAL(timeout()), SLOT(cleanup()));
+    QTimer::singleShot( 0, this, SLOT(pollingPool()) );
 }
 
 
@@ -59,19 +62,21 @@ HttpConnectionHandler* HttpConnectionHandlerPool::getConnectionHandler()
             pool.append(freeHandler);
         }
     }
-#if 1 /*TODO: Dell Me pls*/
-    int k = 0;
-    foreach(HttpConnectionHandler* handler, pool)
-    {
-        if( handler->isBusy() )
-        {
-            k++;
-        }
-    }
-    qDebug() << "DBG: All Connection handlers: " << pool.count() << "  Busy: " << k << "  Free: " << pool.count()-k;
-#endif
     mutex.unlock();
     return freeHandler;
+}
+
+void HttpConnectionHandlerPool::pollingPool()
+{
+    bool Ret = false;
+    foreach(HttpConnectionHandler* handler, pool)
+    {
+        Ret = Ret || handler->handlerSM();
+    }
+    if( Ret)
+        QTimer::singleShot( HANDLER_TIME, this, SLOT(pollingPool()) );
+    else
+        QTimer::singleShot( HANDLER_TIME, this, SLOT(pollingPool()) );
 }
 
 

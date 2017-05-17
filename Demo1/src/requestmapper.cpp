@@ -33,7 +33,7 @@ HttpRequestHandler::ReqHandle_t RequestMapper::service(HttpRequest& request, Htt
 {
     HttpRequestHandler::ReqHandle_t ret = HttpRequestHandler::ERROR;
     QByteArray path=request.getPath();
-    qDebug("RequestMapper: path=%s",path.data());
+   // qDebug("RequestMapper: path=%s",path.data());
 
     // For the following pathes, each request gets its own new instance of the related controller.
 
@@ -69,7 +69,7 @@ HttpRequestHandler::ReqHandle_t RequestMapper::service(HttpRequest& request, Htt
         ret = staticFileController->service(request, response);
     }
 
-    qDebug("RequestMapper: finished request");
+ //   qDebug("RequestMapper: finished request");
 
     // Clear the log buffer
     if (logger)

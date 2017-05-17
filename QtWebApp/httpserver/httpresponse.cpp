@@ -81,7 +81,9 @@ bool HttpResponse::writeToSocket(QByteArray data)
         // If the output buffer has become large, then wait until it has been sent.
         if (socket->bytesToWrite()>16384 )
         {
-            socket->waitForBytesWritten(-1);//TODO: Tuk e problema na download
+            //TODO: CHeck for this!!!
+            //socket->waitForBytesWritten(-1);//TODO: Tuk e problema na download
+            socket->flush();
         }
 
         int written=socket->write(ptr,remaining);

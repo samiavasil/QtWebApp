@@ -8,10 +8,11 @@
 #include <QDir>
 #include "httpcookie.h"
 #include "asynchronoustaskrunner.h"
+#include<httpconnectionhandler.h>
 
 using namespace stefanfrings;
 
-HttpRequest::HttpRequest(QSettings* settings)
+HttpRequest::HttpRequest(HttpConnectionHandler* hnd,QSettings* settings):m_ConHnd(hnd)
 {
     m_MultiPartFileTaskRunner = NULL;
     status=waitForRequest;
@@ -64,6 +65,7 @@ bool HttpRequest::readHeader(QTcpSocket* socket)
     #ifdef SUPERVERBOSE
         qDebug("HttpRequest: read header");
     #endif
+   while( socket->bytesAvailable() && status== waitForHeader ){
     int toRead=maxSize-currentSize+1; // allow one byte more to be able to detect overflow
     lineBuffer.append(socket->readLine(toRead));
     currentSize+=lineBuffer.size();
@@ -72,7 +74,7 @@ bool HttpRequest::readHeader(QTcpSocket* socket)
         #ifdef SUPERVERBOSE
             qDebug("HttpRequest: collecting more parts until line break");
         #endif
-        return true;
+        //return true;
     }
     QByteArray newData=lineBuffer.trimmed();
     lineBuffer.clear();
@@ -147,27 +149,30 @@ bool HttpRequest::readHeader(QTcpSocket* socket)
             status=waitForBody;
         }
     }
+   }
     return false;
 }
 
 bool HttpRequest::readBody(QTcpSocket* socket)
 {
-    bool Ret = true;
+    bool Ret = false;
     Q_ASSERT(expectedBodySize!=0);
-    if (boundary.isEmpty())
+    if( boundary.isEmpty() )
     {
-        // normal body, no multipart
-        #ifdef SUPERVERBOSE
-            qDebug("HttpRequest: receive body");
-        #endif
-        int toRead=expectedBodySize-bodyData.size();
-        QByteArray newData=socket->read(toRead);
-        currentSize+=newData.size();
-        bodyData.append(newData);
-        if (bodyData.size()>=expectedBodySize)
-        {
-            status=complete;
-            Ret = false;
+        while( socket->bytesAvailable() && status != complete ){
+            // normal body, no multipart
+            #ifdef SUPERVERBOSE
+                qDebug("HttpRequest: receive body");
+            #endif
+            int toRead=expectedBodySize-bodyData.size();
+            QByteArray newData=socket->read(toRead);
+            currentSize+=newData.size();
+            bodyData.append(newData);
+            if (bodyData.size()>=expectedBodySize)
+            {
+                status=complete;
+                Ret = false;
+            }
         }
     }
     else
@@ -187,23 +192,12 @@ bool HttpRequest::readBody(QTcpSocket* socket)
         }
         // Transfer data in 64kb blocks
         int fileSize=tempFile->size();
-        int toRead=expectedBodySize-fileSize;
-        if (toRead>65536)
-        {
-            toRead=65536;
-        }
-        fileSize+=tempFile->write(socket->read(toRead));
-        if (fileSize>=maxMultiPartSize)
-        {
-            qWarning("HttpRequest: received too many multipart bytes");
-            status=abort;
-            Ret = false;
-        }
-        else if (fileSize>=expectedBodySize)
+        if (fileSize>=expectedBodySize)
         {
         #ifdef SUPERVERBOSE
             qDebug("HttpRequest: received whole multipart body");
         #endif
+            Ret = false;
             tempFile->flush();
             if (tempFile->error())
             {
@@ -212,9 +206,31 @@ bool HttpRequest::readBody(QTcpSocket* socket)
             if( !parseMultiPartFile() ){
                 tempFile->close();
                 status=complete;
-                Ret = false;
             }
         }
+        else
+        {
+            int toRead=expectedBodySize-fileSize;
+            while(  socket->bytesAvailable() )
+            {
+
+                toRead=expectedBodySize-fileSize;
+                if (toRead>65536)
+                {
+                    toRead=65536;
+                }
+                fileSize+=tempFile->write(socket->read(toRead));
+                if (fileSize>=maxMultiPartSize)
+                {
+                    qWarning("HttpRequest: received too many multipart bytes");
+                    status=abort;
+                    Ret = false;
+                }
+            }
+            Ret = false;
+        }
+
+
     }
     return Ret;
 }
@@ -303,11 +319,13 @@ bool HttpRequest::readFromSocket(QTcpSocket* socket)
     Q_ASSERT(status!=complete);
     if (status==waitForRequest)
     {
-        Ret = readRequest(socket);
+        if(  socket->bytesAvailable() )
+         readRequest(socket);
     }
     else if (status==waitForHeader)
     {
-        Ret = readHeader(socket);
+        if(  socket->bytesAvailable() )
+         readHeader(socket);
     }
     else if (status==waitForBody)
     {
@@ -477,6 +495,7 @@ bool RunTask()
             {
                 break;
             }
+             QThread::yieldCurrentThread();
         }
 
 #ifdef SUPERVERBOSE
@@ -541,6 +560,7 @@ bool RunTask()
                     }
                 }
             }
+            QThread::yieldCurrentThread();
         }
     }
     if (tempFile->error())
@@ -550,6 +570,7 @@ bool RunTask()
 #ifdef SUPERVERBOSE
     qDebug("HttpRequest: finished parsing multipart temp file");
 #endif
+     qDebug("HttpRequest: finished parsing multipart temp file !!!!!!!!!!!!!!!!!!!!!!!");
     return false;
 }
 };
@@ -561,6 +582,7 @@ bool HttpRequest::parseMultiPartFile()
     bool Ret = true;
     if( 0 == m_MultiPartFileTaskRunner ){
         m_MultiPartFileTaskRunner = new AsynchronousTaskRunner( new MultiPartFilePatseTask(tempFile , boundary ,parameters ,uploadedFiles ,currentSize ) );
+        QObject::connect( m_MultiPartFileTaskRunner,SIGNAL(AsynchronousTaskFinished()),m_ConHnd,SLOT(setDurty()) );
         m_MultiPartFileTaskRunner->StartRun();
     }
 

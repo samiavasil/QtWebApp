@@ -28,7 +28,7 @@ void ExecutiveTask::run()
         {
             buffer = QSharedPointer<QByteArray>( new QByteArray(m_File->read(65536)) );
             emit write(buffer);
-            QThread::yieldCurrentThread();
+         //   QThread::yieldCurrentThread();
         }
     }
     else

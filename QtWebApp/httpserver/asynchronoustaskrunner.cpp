@@ -51,6 +51,7 @@ AsynchronousTaskRunner::ATR_T AsynchronousTaskRunner::AttachTask( Task *task )
 void AsynchronousTaskRunner::taskFinished()
 {
     m_Running = false;
+    emit AsynchronousTaskFinished();
 }
 
 void AsynchronousTaskRunner::run()

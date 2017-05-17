@@ -7,6 +7,7 @@
 #include <QMutex>
 #include "httpglobal.h"
 #include "httpconnectionhandler.h"
+class QSettings;
 
 namespace stefanfrings {
 
@@ -64,6 +65,8 @@ public:
     /** Get a free connection handler, or 0 if not available. */
     HttpConnectionHandler* getConnectionHandler();
 
+protected slots:
+    void pollingPool();
 private:
 
     /** Settings for this pool */

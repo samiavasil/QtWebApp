@@ -37,6 +37,8 @@ namespace stefanfrings {
   The body is always a little larger than the file itself.
 */
 
+class HttpConnectionHandler;
+
 class DECLSPEC HttpRequest {
     Q_DISABLE_COPY(HttpRequest)
     friend class HttpSessionStore;
@@ -50,7 +52,7 @@ public:
       Constructor.
       @param settings Configuration settings
     */
-    HttpRequest(QSettings* settings);
+    explicit HttpRequest( HttpConnectionHandler* hnd,QSettings* settings);
 
     /**
       Destructor.
@@ -214,6 +216,8 @@ private:
 
     /** Temp file, that is used to store the multipart/form-data body */
     QTemporaryFile* tempFile;
+
+    HttpConnectionHandler* m_ConHnd;
 
     /** Parse the multipart body, that has been stored in the temp file. */
     bool parseMultiPartFile();

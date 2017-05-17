@@ -9,16 +9,20 @@
 #ifndef QT_NO_OPENSSL
    #include <QSslConfiguration>
 #endif
-#include <QTcpSocket>
-#include <QSettings>
 #include <QTimer>
 #include <QThread>
 #include "httpglobal.h"
-#include "httprequest.h"
-#include "httprequesthandler.h"
-#include "qwebsocket.h"
+
+
+class QTcpSocket;
+class QWebSocket;
+class QSettings;
 
 namespace stefanfrings {
+
+class HttpRequestHandler;
+class HttpRequest;
+class HttpResponse;
 
 /** Alias type definition, for compatibility to different Qt versions */
 #if QT_VERSION >= 0x050000
@@ -84,6 +88,10 @@ public:
     /** Mark this handler as busy */
     void setBusy();
 
+    bool IsDirty() const;
+
+     bool handlerSM();
+
 private:
     typedef enum{
         UNDEFINED,
@@ -122,6 +130,8 @@ private:
 
     HttpConnectionState m_State;
 
+    bool m_Dirty;
+
     /** Executes the threads own event loop */
     void run();
 
@@ -132,6 +142,8 @@ private:
 
 signals:
     void dellMeTestSignal();
+
+
 public slots:
 
     /**
@@ -139,6 +151,9 @@ public slots:
       @param socketDescriptor references the accepted connection.
     */
     void handleConnection(tSocketDescriptor socketDescriptor);
+
+
+    void setDurty();
 
 protected:
     HttpConnectionState readHttpRequest();
@@ -148,11 +163,13 @@ protected:
     HttpConnectionHandler::HttpConnectionState httpAbort();
 private slots:
 
+
+
     /** Received from the socket when a read-timeout occured */
     void readTimeout();
 
-    /** Received from the socket when incoming data can be read */
-    void handlerSM();
+
+
 
     void websocketTextMessage(const QString &data);
 

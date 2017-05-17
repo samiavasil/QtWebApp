@@ -24,6 +24,8 @@ public:
 
 protected slots:
     void taskFinished();
+signals:
+    void AsynchronousTaskFinished();
 protected:
     virtual void run();
 protected:

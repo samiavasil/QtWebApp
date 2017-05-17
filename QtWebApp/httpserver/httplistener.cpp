@@ -75,7 +75,8 @@ void HttpListener::incomingConnection(tSocketDescriptor socketDescriptor) {
     if (freeHandler)
     {
         // The descriptor is passed via event queue because the handler lives in another thread
-        QMetaObject::invokeMethod(freeHandler, "handleConnection", Qt::QueuedConnection, Q_ARG(tSocketDescriptor, socketDescriptor));
+       // QMetaObject::invokeMethod(freeHandler, "handleConnection", Qt::QueuedConnection, Q_ARG(tSocketDescriptor, socketDescriptor));
+        freeHandler->handleConnection(socketDescriptor);
     }
     else
     {
