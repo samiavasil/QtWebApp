@@ -582,7 +582,7 @@ bool HttpRequest::parseMultiPartFile()
     bool Ret = true;
     if( 0 == m_MultiPartFileTaskRunner ){
         m_MultiPartFileTaskRunner = new AsynchronousTaskRunner( new MultiPartFilePatseTask(tempFile , boundary ,parameters ,uploadedFiles ,currentSize ) );
-        QObject::connect( m_MultiPartFileTaskRunner,SIGNAL(AsynchronousTaskFinished()),m_ConHnd,SLOT(setDurty()) );
+        QObject::connect( m_MultiPartFileTaskRunner,SIGNAL(AsynchronousTaskFinished()),m_ConHnd,SLOT(AsynchronousTaskFinished()) );
         m_MultiPartFileTaskRunner->StartRun();
     }
 

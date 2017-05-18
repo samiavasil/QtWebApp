@@ -10,37 +10,39 @@
 #include "qwebsocket.h"
 #include <QSettings>
 #include <QTcpSocket>
+#include <SM/httpconnectionstate.h>
 
 namespace stefanfrings{
 
 HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHandler* requestHandler, QSslConfiguration* sslConfiguration, QObject *parent )
-    :
-#if defined(HANDLER_THREADING)
-      QThread(),
-#else
-      QObject(parent),
-#endif
-      m_type(UNDEFINED),m_serverName("Websocket Test Server"),socket(NULL),m_WebSocket(NULL)
+    : QObject(parent),
+      m_type(UNDEFINED),
+      m_serverName("Websocket Test Server"),
+      socket(NULL),
+      m_WebSocket(NULL),
+      m_AllStates({ new HttpConnectionState("IDLE"),
+                    new HttpConnectionState("CONNECT_HANDSHAKE"),
+                    new HttpConnectionState("HTTP_GET_REQUEST"),
+                    new HttpConnectionState("HTTP_HANDLE_REQUEST"),
+                    new HttpConnectionState("WEBSOCKET_HANDLING"),
+                    new HttpConnectionState("HTTP_ABORT"),
+                    new HttpConnectionState("CLOSE_CONNECTION"),
+                    })
+
 {
     Q_ASSERT(settings!=0);
     Q_ASSERT(requestHandler!=0);
+    setState( IDLE );
     this->settings=settings;
     this->requestHandler=requestHandler;
     this->sslConfiguration=sslConfiguration;
     currentRequest=0;
     currentResponse = 0;
     busy=false;
-    m_State = IDLE;
+
 
     // Create TCP or SSL socket
     createSocket();
-//    connect( this->requestHandler, SIGNAL(AsyncEvent()),this, SLOT( handlerSM()) );
-    // execute signals in my own thread
-#if defined(HANDLER_THREADING)
-    moveToThread(this);
-    socket->moveToThread(this);
-    readTimer.moveToThread(this);
-#endif
     connect(&readTimer, SIGNAL(timeout()), SLOT(readTimeout()));
     readTimer.setSingleShot(true);
 
@@ -48,22 +50,17 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
     qDebug("HttpConnectionHandler (%p): constructed", this);
 #endif
 
-#if defined(HANDLER_THREADING)
-    this->start();
-#else
-
-#endif
 }
 
 
 HttpConnectionHandler::~HttpConnectionHandler()
 {
-#if defined(HANDLER_THREADING)
-    quit();
-    wait();
-#else
-
-#endif
+    for( int i = 0; i < STATES_NUM; i++ ) {
+        if( m_AllStates[i] )
+        {
+            delete m_AllStates[i];
+        }
+    }
 #if defined SUPERVERBOSE
     qDebug("HttpConnectionHandler (%p) type (%d): destroyed", this, m_type);
 #endif
@@ -104,29 +101,6 @@ void HttpConnectionHandler::createSocket()
 }
 
 
-void HttpConnectionHandler::run()
-{
-#if defined SUPERVERBOSE
-    qDebug("HttpConnectionHandler (%p): thread started", this);
-#endif
-#if defined(HANDLER_THREADING)
-    try
-    {
-        exec();
-    }
-    catch (...)
-    {
-        qCritical("HttpConnectionHandler (%p): an uncatched exception occured in the thread",this);
-    }
-    socket->close();
-    delete socket;
-    readTimer.stop();
-    qDebug("HttpConnectionHandler (%p): thread stopped", this);
-#else
-
-#endif
-}
-
 void HttpConnectionHandler::preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator)
 {
 #if defined SUPERVERBOSE
@@ -140,7 +114,8 @@ void HttpConnectionHandler::encrypted()
 #if defined SUPERVERBOSE
     qDebug() << "SSL ENCRYPTED!!!!!!!!!!!!!!";
 #endif
-//    connect(sslSocket, SIGNAL(readyRead()), SLOT(handlerSM()), Qt::QueuedConnection);
+    connect(sslSocket, SIGNAL(readyRead()), SLOT(readyRead()), Qt::QueuedConnection);
+    connect(sslSocket, SIGNAL(bytesWritten(qint64)), SLOT(), Qt::QueuedConnection);
     connect(sslSocket, SIGNAL(disconnected()), SLOT(disconnected()), Qt::QueuedConnection );
 }
 
@@ -159,7 +134,7 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
 #endif
     busy = true;
     Q_ASSERT(socket->isOpen()==false); // if not, then the handler is already busy
-
+m_CurrentConnectionState->handleConnectionEvent(*this, socketDescriptor);
     m_State = CONNECT_HANDSHAKE;
     //UGLY workaround - we need to clear writebuffer before reusing this socket
     //https://bugreports.qt-project.org/browse/QTBUG-28914
@@ -193,14 +168,14 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
     else
     {
         // Connect signals
-//        connect(socket, SIGNAL(readyRead()), this,SLOT(handlerSM()), Qt::QueuedConnection);
+        connect(socket, SIGNAL(readyRead()), this,SLOT(readyRead()), Qt::QueuedConnection);
         connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
     }
     //DEL ME:: TODO just for test
 //    connect(this, SIGNAL(dellMeTestSignal()), this,SLOT(handlerSM()),Qt::QueuedConnection);
 #else
    // Connect signals
-   connect(socket, SIGNAL(readyRead()), this,SLOT(read()));
+   connect(socket, SIGNAL(readyRead()), this,SLOT(readyRead()), Qt::QueuedConnection);
    connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
 #endif
     if (!socket->setSocketDescriptor(socketDescriptor))
@@ -230,6 +205,16 @@ void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
     currentRequest=0;
     delete currentResponse;
     currentResponse = 0;
+}
+
+void HttpConnectionHandler::readyRead()
+{
+    m_CurrentConnectionState->readyReadEvent(*this);
+}
+
+void HttpConnectionHandler::bytesWritten(quint64 bytesWriten)
+{
+    m_CurrentConnectionState->writedDataEvent(*this,bytesWriten);
 }
 
 
@@ -277,10 +262,9 @@ void HttpConnectionHandler::readTimeout()
 void HttpConnectionHandler::disconnected()
 {
 #if defined SUPERVERBOSE
-
-#endif
     qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,m_type);
-
+#endif   
+    m_CurrentConnectionState->disconnectEvent(*this);
     readTimer.stop();
 
     if( WEBSOCKET == m_type )
@@ -322,7 +306,7 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
                 int readTimeout=settings->value("readTimeout",10000).toInt();
                 readTimer.start(readTimeout);
                 ret = true;
-                qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(setDurty()));
+                qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(readyRead()));
                 qDebug() << disconnect(pTcpSocket, SIGNAL(disconnected()),this, SLOT(disconnected()));
                 connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketTextMessage(QString)));
                 connect(m_WebSocket, SIGNAL(binaryFrameReceived(QByteArray,bool)), SLOT(websocketbinaryFrameReceived(QByteArray,bool)));
@@ -344,12 +328,12 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
 
 
 
-HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpRequest()
+HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::readHttpRequest()
 {
     // The loop adds support for HTTP pipelinig
    // while (socket->bytesAvailable())
-    bool callMe = false;
-    HttpConnectionHandler::HttpConnectionState state = m_State;
+
+    HttpConnectionHandler::HttpConnectionStateEnum state = m_State;
     {
         #ifdef SUPERVERBOSE
             qDebug("HttpConnectionHandler (%p): read input",this);
@@ -387,7 +371,7 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::readHttpReques
 
 }
 
-HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::handleHttpRequest()
+HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::handleHttpRequest()
 {
     // If the request is complete, let the request mapper dispatch it
     if (currentRequest->getStatus()!=HttpRequest::complete)
@@ -477,7 +461,7 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::handleHttpRequ
     {
         socket->flush();
         socket->disconnectFromHost();
-        return CLOSE_CONNECTION;
+       // return HTTP_GET_REQUEST;
     }
     else
     {
@@ -493,7 +477,7 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::handleHttpRequ
 }
 
 
-HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::httpAbort()
+HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::httpAbort()
 {
     socket->write("HTTP/1.1 413 entity too large\r\nConnection: close\r\n\r\n413 Entity too large\r\n");
     socket->flush();
@@ -503,14 +487,16 @@ HttpConnectionHandler::HttpConnectionState HttpConnectionHandler::httpAbort()
     return CONNECT_HANDSHAKE;
 }
 
-void HttpConnectionHandler::setDurty()
+void HttpConnectionHandler::AsynchronousTaskFinished()
 {
+    m_CurrentConnectionState->asynchronousWorkerEvent(*this);
     m_Dirty = true;
 }
 
 
 bool HttpConnectionHandler::handlerSM()
 {
+    m_CurrentConnectionState->handlingLoopEvent(*this);
     if(  socket->state()!=QAbstractSocket::ConnectedState )
     {
         return false;
@@ -573,6 +559,17 @@ bool HttpConnectionHandler::handlerSM()
         }
     }
     return m_Dirty;
+}
+
+HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::State() const
+{
+    return m_State;
+}
+
+void HttpConnectionHandler::setState(const HttpConnectionStateEnum &State)
+{
+    m_State = State;
+    m_CurrentConnectionState = m_AllStates[State];
 }
 
 

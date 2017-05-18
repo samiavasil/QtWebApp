@@ -10,7 +10,7 @@
 #include<QSettings>
 
 using namespace stefanfrings;
-#define HANDLER_TIME 10
+#define HANDLER_TIME 300
 HttpConnectionHandlerPool::HttpConnectionHandlerPool(QSettings* settings, HttpRequestHandler* requestHandler)
     : QObject()
 {
@@ -71,10 +71,12 @@ void HttpConnectionHandlerPool::pollingPool()
     bool Ret = false;
     foreach(HttpConnectionHandler* handler, pool)
     {
-        Ret = Ret || handler->handlerSM();
+        if( handler->isBusy() ){
+            Ret = Ret || handler->handlerSM();
+        }
     }
     if( Ret)
-        QTimer::singleShot( HANDLER_TIME, this, SLOT(pollingPool()) );
+        QTimer::singleShot( HANDLER_TIME/10, this, SLOT(pollingPool()) );
     else
         QTimer::singleShot( HANDLER_TIME, this, SLOT(pollingPool()) );
 }

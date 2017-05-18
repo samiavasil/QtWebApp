@@ -17,6 +17,7 @@
 class QTcpSocket;
 class QWebSocket;
 class QSettings;
+class HttpConnectionState;
 
 namespace stefanfrings {
 
@@ -51,15 +52,12 @@ class HttpResponse;
   The readTimeout value defines the maximum time to wait for a complete HTTP request.
   @see HttpRequest for description of config settings maxRequestSize and maxMultiPartSize.
 */
-class DECLSPEC HttpConnectionHandler :
-#if defined(HANDLER_THREADING)
-        public QThread
-#else
-        public QObject
-#endif
+class DECLSPEC HttpConnectionHandler : public QObject
+
 {
     Q_OBJECT
     Q_DISABLE_COPY(HttpConnectionHandler)
+    friend class HttpConnectionState;
 
 public:
     typedef enum{
@@ -70,7 +68,8 @@ public:
         WEBSOCKET_HANDLING,
         HTTP_ABORT,
         CLOSE_CONNECTION,
-    } HttpConnectionState;
+        STATES_NUM
+    } HttpConnectionStateEnum;
     /**
       Constructor.
       @param settings Configuration settings of the HTTP webserver
@@ -92,12 +91,17 @@ public:
 
      bool handlerSM();
 
+     HttpConnectionStateEnum State() const;
+
 private:
-    typedef enum{
-        UNDEFINED,
-        HTTP,
-        WEBSOCKET
-    } HandlerType_t;
+
+     void setState(const HttpConnectionStateEnum &State);
+
+     typedef enum{
+         UNDEFINED,
+         HTTP,
+         WEBSOCKET
+     } HandlerType_t;
 
     HandlerType_t m_type;
 
@@ -128,12 +132,13 @@ private:
     /** Configuration for SSL */
     QSslConfiguration* sslConfiguration;
 
-    HttpConnectionState m_State;
+    HttpConnectionStateEnum m_State;
 
     bool m_Dirty;
 
-    /** Executes the threads own event loop */
-    void run();
+    HttpConnectionState* m_CurrentConnectionState;
+
+    HttpConnectionState* const  m_AllStates[STATES_NUM];
 
     /**  Create SSL or TCP socket */
     void createSocket();
@@ -152,15 +157,18 @@ public slots:
     */
     void handleConnection(tSocketDescriptor socketDescriptor);
 
+    void readyRead();
 
-    void setDurty();
+    void bytesWritten( quint64 bytesWriten );
+
+    void AsynchronousTaskFinished();
 
 protected:
-    HttpConnectionState readHttpRequest();
+    HttpConnectionStateEnum readHttpRequest();
 
-    HttpConnectionHandler::HttpConnectionState handleHttpRequest();
+    HttpConnectionHandler::HttpConnectionStateEnum handleHttpRequest();
 
-    HttpConnectionHandler::HttpConnectionState httpAbort();
+    HttpConnectionHandler::HttpConnectionStateEnum httpAbort();
 private slots:
 
 

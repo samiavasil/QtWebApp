@@ -41,7 +41,7 @@ class HttpConnectionHandler;
 
 class DECLSPEC HttpRequest {
     Q_DISABLE_COPY(HttpRequest)
-    friend class HttpSessionStore;
+   // friend class HttpSessionStore;
 
 public:
 

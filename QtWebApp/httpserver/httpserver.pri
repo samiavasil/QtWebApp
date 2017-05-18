@@ -21,7 +21,8 @@ HEADERS += $$PWD/httpglobal.h \
            $$PWD/httpsessionstore.h \
            $$PWD/staticfilecontroller.h \
     $$PWD/statemachine.h \
-    $$PWD/asynchronoustaskrunner.h
+    $$PWD/asynchronoustaskrunner.h \
+    $$PWD/SM/httpconnectionstate.h
 
 SOURCES += $$PWD/httpglobal.cpp \
            $$PWD/httplistener.cpp \
@@ -35,4 +36,5 @@ SOURCES += $$PWD/httpglobal.cpp \
            $$PWD/httpsessionstore.cpp \
            $$PWD/staticfilecontroller.cpp \
     $$PWD/statemachine.cpp \
-    $$PWD/asynchronoustaskrunner.cpp
+    $$PWD/asynchronoustaskrunner.cpp \
+    $$PWD/SM/httpconnectionstate.cpp

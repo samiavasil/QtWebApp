@@ -135,10 +135,15 @@ void HttpResponse::write(QByteArray data, bool lastPart)
             if (data.size()>0)
             {
                 QByteArray size=QByteArray::number(data.size(),16);
-                writeToSocket(size);
-                writeToSocket("\r\n");
+//                writeToSocket(size);
+//                writeToSocket("\r\n");
+//                writeToSocket(data);
+//                writeToSocket("\r\n");
+
+                data.prepend("\r\n");
+                data.prepend(size);
+                data.append("\r\n");
                 writeToSocket(data);
-                writeToSocket("\r\n");
             }
         }
         else
