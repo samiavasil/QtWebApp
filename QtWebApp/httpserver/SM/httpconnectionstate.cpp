@@ -1,5 +1,8 @@
 #include "httpconnectionstate.h"
+#include"httpconnectionhandler.h"
 #include<QDebug>
+
+namespace stefanfrings {
 
 HttpConnectionState::HttpConnectionState(const QString &name):m_StateName(name){
 
@@ -21,8 +24,32 @@ void HttpConnectionState::handlingLoopEvent(stefanfrings::HttpConnectionHandler 
 }
 
 void HttpConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHndl){
-    qDebug() << "Warning: " << "Event disconnectEvent was received in not appropriate state '" << m_StateName << "':";
-    qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
+//#if defined SUPERVERBOSE
+    qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,conHndl.m_type);
+//#endif
+    conHndl.readTimer.stop();
+
+    if( conHndl.WEBSOCKET == conHndl.m_type )
+    {
+        conHndl.m_WebSocket->deleteLater();
+        conHndl.m_WebSocket = NULL;
+    }
+    else
+    {
+        conHndl.socket->close();
+        QObject::disconnect(conHndl.socket,0,0,0);
+    }
+    conHndl.m_type  =  conHndl.UNDEFINED;
+    conHndl.createSocket();
+    conHndl.busy = false;
+    QObject::disconnect( &conHndl,SIGNAL(signalExecuteSM()),&conHndl,SLOT(handlerSM()) );
+    conHndl.setState( conHndl.IDLE_STATE );
+
+    //TODO: Check this
+    delete conHndl.currentRequest;
+    conHndl.currentRequest=0;
+    delete conHndl.currentResponse;
+    conHndl.currentResponse = 0;
 }
 
 void HttpConnectionState::readyReadEvent(stefanfrings::HttpConnectionHandler &conHndl){
@@ -38,4 +65,9 @@ void HttpConnectionState::writedDataEvent(stefanfrings::HttpConnectionHandler &c
 void HttpConnectionState::asynchronousWorkerEvent(stefanfrings::HttpConnectionHandler &conHndl){
     qDebug() << "Warning: " << "Event asynchronousWorkerEvent was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
+}
+
+
+
+
 }

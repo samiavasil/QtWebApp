@@ -6,11 +6,14 @@
 #include "httpconnectionhandler.h"
 #include "httpresponse.h"
 #include "httprequest.h"
-#include "httprequesthandler.h"
 #include "qwebsocket.h"
-#include <QSettings>
 #include <QTcpSocket>
 #include <SM/httpconnectionstate.h>
+#include <SM/httpidlestate.h>
+#include <SM/httpconnectionhandshakestate.h>
+#include <SM/httpreadrequeststate.h>
+#include <SM/httphandlerequeststate.h>
+
 
 namespace stefanfrings{
 
@@ -20,10 +23,10 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
       m_serverName("Websocket Test Server"),
       socket(NULL),
       m_WebSocket(NULL),
-      m_AllStates({ new HttpConnectionState("IDLE"),
-                    new HttpConnectionState("CONNECT_HANDSHAKE"),
-                    new HttpConnectionState("HTTP_GET_REQUEST"),
-                    new HttpConnectionState("HTTP_HANDLE_REQUEST"),
+      m_AllStates({ new HttpIdleState("IDLE"),
+                    new HttpConnectionHandshakeState("CONNECT_HANDSHAKE"),
+                    new HttpReadRequestState("HTTP_GET_REQUEST"),
+                    new HttpHandleRequestState("HTTP_HANDLE_REQUEST"),
                     new HttpConnectionState("WEBSOCKET_HANDLING"),
                     new HttpConnectionState("HTTP_ABORT"),
                     new HttpConnectionState("CLOSE_CONNECTION"),
@@ -32,7 +35,7 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
 {
     Q_ASSERT(settings!=0);
     Q_ASSERT(requestHandler!=0);
-    setState( IDLE );
+    setState( IDLE_STATE );
     this->settings=settings;
     this->requestHandler=requestHandler;
     this->sslConfiguration=sslConfiguration;
@@ -129,13 +132,17 @@ void HttpConnectionHandler::sslErrors(const QList<QSslError> &errors)
 
 void HttpConnectionHandler::handleConnection(tSocketDescriptor socketDescriptor)
 {
+#if defined(SATES_DEFINED)
+    m_CurrentConnectionState->handleConnectionEvent(*this, socketDescriptor);
+#else
+
 #if defined SUPERVERBOSE
     qDebug("HttpConnectionHandler (%p): handle new connection", this);
 #endif
     busy = true;
     Q_ASSERT(socket->isOpen()==false); // if not, then the handler is already busy
-m_CurrentConnectionState->handleConnectionEvent(*this, socketDescriptor);
-    m_State = CONNECT_HANDSHAKE;
+
+    m_State = CONNECT_HANDSHAKE_STATE;
     //UGLY workaround - we need to clear writebuffer before reusing this socket
     //https://bugreports.qt-project.org/browse/QTBUG-28914
    socket->connectToHost("",0);
@@ -197,6 +204,7 @@ m_CurrentConnectionState->handleConnectionEvent(*this, socketDescriptor);
         }
     #endif
 
+
     // Start timer for read timeout
     int readTimeout=settings->value("readTimeout",10000).toInt();
     readTimer.start(readTimeout);
@@ -205,6 +213,7 @@ m_CurrentConnectionState->handleConnectionEvent(*this, socketDescriptor);
     currentRequest=0;
     delete currentResponse;
     currentResponse = 0;
+#endif
 }
 
 void HttpConnectionHandler::readyRead()
@@ -241,8 +250,10 @@ void HttpConnectionHandler::readTimeout()
 #endif
     //Commented out because QWebView cannot handle this.
     //socket->write("HTTP/1.1 408 request timeout\r\nConnection: close\r\n\r\n408 request timeout\r\n");
+disconnected();
 
-
+//TODO CHECK THIS??
+#if 0
     if( WEBSOCKET == m_type )
     {
          m_WebSocket->close();
@@ -256,6 +267,7 @@ void HttpConnectionHandler::readTimeout()
     currentRequest=0;
     delete currentResponse;
     currentResponse = 0;
+#endif
 }
 
 
@@ -264,7 +276,9 @@ void HttpConnectionHandler::disconnected()
 #if defined SUPERVERBOSE
     qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,m_type);
 #endif   
+#if defined(SATES_DEFINED)
     m_CurrentConnectionState->disconnectEvent(*this);
+#else
     readTimer.stop();
 
     if( WEBSOCKET == m_type )
@@ -278,10 +292,12 @@ void HttpConnectionHandler::disconnected()
         socket->close();
         QObject::disconnect(socket,0,0,0);
     }
+
     m_type  = UNDEFINED;
-    m_State = IDLE;
+    m_State = IDLE_STATE;
     createSocket();
     busy = false;
+#endif
 }
 
 //TODO: Fix me
@@ -326,8 +342,13 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
     return  ret;
 }
 
+void HttpConnectionHandler::requestExecuteSM()
+{
+    emit signalExecuteSM();
+}
 
 
+#if !defined(SATES_DEFINED)
 HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::readHttpRequest()
 {
     // The loop adds support for HTTP pipelinig
@@ -351,25 +372,25 @@ HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::readHttpRe
                 // expire during large file uploads.
                 int readTimeout=settings->value("readTimeout",10000).toInt();
                 readTimer.start(readTimeout);
-                state = HTTP_GET_REQUEST;
+                state = HTTP_GET_REQUEST_STATE;
             }
         }
 
         // If the request is aborted, return error message and close the connection
         if (currentRequest->getStatus()==HttpRequest::abort)
         {
-            state = HTTP_ABORT;
+            state = HTTP_ABORT_STATE;
         }
         if (currentRequest->getStatus()==HttpRequest::complete)
         {
             readTimer.stop();
             qDebug("HttpConnectionHandler (%p): received request",this);
-            state = HTTP_HANDLE_REQUEST;
+            state = HTTP_HANDLE_REQUEST_STATE;
         }
     }
     return state;
-
 }
+
 
 HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::handleHttpRequest()
 {
@@ -377,7 +398,7 @@ HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::handleHttp
     if (currentRequest->getStatus()!=HttpRequest::complete)
     {
         qDebug() << "Wrong currentRequest status aborting !!";
-        return HTTP_ABORT;
+        return HTTP_ABORT_STATE;
     }
 
     if( 0 == currentResponse )
@@ -409,11 +430,11 @@ HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::handleHttp
        HttpRequestHandler::ReqHandle_t reqRet = requestHandler->service(*currentRequest, *currentResponse);
        if( HttpRequestHandler::WAIT == reqRet )
        {
-           return HTTP_HANDLE_REQUEST;
+           return HTTP_HANDLE_REQUEST_STATE;
        }
        else if( HttpRequestHandler::ERROR == reqRet ){
           //TODO: TBD some error. Maybe return some http error....Or try to handle again and after that return http error
-       return HTTP_HANDLE_REQUEST;
+       return HTTP_HANDLE_REQUEST_STATE;
        }
     }
     catch (...)
@@ -473,30 +494,38 @@ HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::handleHttp
     currentRequest=0;
     delete currentResponse;
     currentResponse = 0;
-    return HTTP_GET_REQUEST;
+    return HTTP_GET_REQUEST_STATE;
 }
-
+#endif
 
 HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::httpAbort()
 {
     socket->write("HTTP/1.1 413 entity too large\r\nConnection: close\r\n\r\n413 Entity too large\r\n");
     socket->flush();
+    delete currentRequest;
+    currentRequest=0;
+    disconnected();
+    /*
     socket->disconnectFromHost();
     delete currentRequest;
     currentRequest=0;
-    return CONNECT_HANDSHAKE;
+    return CONNECT_HANDSHAKE_STATE;*/
 }
 
 void HttpConnectionHandler::AsynchronousTaskFinished()
 {
     m_CurrentConnectionState->asynchronousWorkerEvent(*this);
+#if !defined(SATES_DEFINED)
     m_Dirty = true;
+#endif
 }
 
 
 bool HttpConnectionHandler::handlerSM()
 {
+#if defined(SATES_DEFINED)
     m_CurrentConnectionState->handlingLoopEvent(*this);
+#else
     if(  socket->state()!=QAbstractSocket::ConnectedState )
     {
         return false;
@@ -504,14 +533,14 @@ bool HttpConnectionHandler::handlerSM()
     m_Dirty = false;
     switch( m_State )
     {
-        case CONNECT_HANDSHAKE:{
+        case CONNECT_HANDSHAKE_STATE:{
             if ( !socket->canReadLine() ) {
                 return false;
             }
             if( websocketHandshake( socket ) )
             {
                 m_type  = WEBSOCKET;
-                m_State = WEBSOCKET_HANDLING;
+                m_State = WEBSOCKET_HANDLING_STATE;
             }
             else
             {
@@ -523,7 +552,7 @@ bool HttpConnectionHandler::handlerSM()
                    currentRequest = 0;
                 }
                 currentRequest=new HttpRequest(this,settings);
-                m_State = HTTP_GET_REQUEST;
+                m_State = HTTP_GET_REQUEST_STATE;
                 m_State = readHttpRequest();
 
 
@@ -531,7 +560,7 @@ bool HttpConnectionHandler::handlerSM()
              m_Dirty = true;
             break;
         }
-        case HTTP_GET_REQUEST:{
+        case HTTP_GET_REQUEST_STATE:{
             if (!currentRequest)
             {
                currentRequest=new HttpRequest(this,settings);
@@ -542,14 +571,14 @@ bool HttpConnectionHandler::handlerSM()
 //            }
             break;
         }
-        case HTTP_HANDLE_REQUEST:{
+        case HTTP_HANDLE_REQUEST_STATE:{
             m_State = handleHttpRequest();
             break;
         }
-        case WEBSOCKET_HANDLING:{
+        case WEBSOCKET_HANDLING_STATE:{
             break;
         }
-        case HTTP_ABORT:{
+        case HTTP_ABORT_STATE:{
             m_State = httpAbort();
             m_Dirty = true;
             break;
@@ -558,6 +587,7 @@ bool HttpConnectionHandler::handlerSM()
             break;
         }
     }
+#endif
     return m_Dirty;
 }
 

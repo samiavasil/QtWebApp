@@ -12,16 +12,15 @@
 #include <QTimer>
 #include <QThread>
 #include "httpglobal.h"
-
+#include <QSettings>
+#include "httprequesthandler.h"
 
 class QTcpSocket;
 class QWebSocket;
-class QSettings;
-class HttpConnectionState;
+#define SATES_DEFINED
 
 namespace stefanfrings {
-
-class HttpRequestHandler;
+class HttpConnectionState;
 class HttpRequest;
 class HttpResponse;
 
@@ -56,18 +55,24 @@ class DECLSPEC HttpConnectionHandler : public QObject
 
 {
     Q_OBJECT
-    Q_DISABLE_COPY(HttpConnectionHandler)
     friend class HttpConnectionState;
+    friend class HttpIdleState;
+    friend class HttpGetRequestState;
+    friend class HttpConnectionHandshakeState;
+    friend class HttpReadRequestState;
+    friend class HttpHandleRequestState;
 
+    Q_DISABLE_COPY(HttpConnectionHandler)
 public:
     typedef enum{
-        IDLE,
-        CONNECT_HANDSHAKE,
-        HTTP_GET_REQUEST,
-        HTTP_HANDLE_REQUEST,
-        WEBSOCKET_HANDLING,
-        HTTP_ABORT,
-        CLOSE_CONNECTION,
+        IDLE_STATE,
+        CONNECT_HANDSHAKE_STATE,
+        HTTP_GET_REQUEST_STATE,
+        HTTP_HANDLE_REQUEST_STATE,
+        WEBSOCKET_HANDLING_STATE,
+        HTTP_ABORT_STATE,
+        CLOSE_CONNECTION_STATE,
+        UNDEFINED_ERROR_STATE,
         STATES_NUM
     } HttpConnectionStateEnum;
     /**
@@ -89,19 +94,65 @@ public:
 
     bool IsDirty() const;
 
-     bool handlerSM();
-
      HttpConnectionStateEnum State() const;
 
+    /**
+      Received from from the listener, when the handler shall start processing a new connection.
+      @param socketDescriptor references the accepted connection.
+    */
+    void handleConnection(tSocketDescriptor socketDescriptor);
+
+public slots:
+
+    void readyRead();
+
+    void bytesWritten( quint64 bytesWriten );
+
+    void AsynchronousTaskFinished();
+
+    bool handlerSM();
+
+signals:
+    void signalExecuteSM();
+
+protected:
+
+    void requestExecuteSM();
+
+    HttpConnectionStateEnum readHttpRequest();
+#if !defined(SATES_DEFINED)
+    HttpConnectionHandler::HttpConnectionStateEnum handleHttpRequest();
+#endif
+    HttpConnectionHandler::HttpConnectionStateEnum httpAbort();
+private slots:
+
+    /** Received from the socket when a read-timeout occured */
+    void readTimeout();
+
+    void websocketTextMessage(const QString &data);
+
+    void websocketbinaryFrameReceived(const QByteArray &data, bool final );
+
+    /** Received from the socket when a connection has been closed */
+    void disconnected();
+
+    void preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator);
+    void encrypted();
+    void sslErrors(const QList<QSslError> &errors);
+
 private:
+    typedef enum{
+        UNDEFINED,
+        HTTP,
+        WEBSOCKET
+    } HandlerType_t;
 
-     void setState(const HttpConnectionStateEnum &State);
+    /**  Create SSL or TCP socket */
+    void createSocket();
 
-     typedef enum{
-         UNDEFINED,
-         HTTP,
-         WEBSOCKET
-     } HandlerType_t;
+    bool websocketHandshake(QTcpSocket *pTcpSocket);
+
+    void setState(const HttpConnectionStateEnum &State);
 
     HandlerType_t m_type;
 
@@ -140,55 +191,6 @@ private:
 
     HttpConnectionState* const  m_AllStates[STATES_NUM];
 
-    /**  Create SSL or TCP socket */
-    void createSocket();
-
-    bool websocketHandshake(QTcpSocket *pTcpSocket);
-
-signals:
-    void dellMeTestSignal();
-
-
-public slots:
-
-    /**
-      Received from from the listener, when the handler shall start processing a new connection.
-      @param socketDescriptor references the accepted connection.
-    */
-    void handleConnection(tSocketDescriptor socketDescriptor);
-
-    void readyRead();
-
-    void bytesWritten( quint64 bytesWriten );
-
-    void AsynchronousTaskFinished();
-
-protected:
-    HttpConnectionStateEnum readHttpRequest();
-
-    HttpConnectionHandler::HttpConnectionStateEnum handleHttpRequest();
-
-    HttpConnectionHandler::HttpConnectionStateEnum httpAbort();
-private slots:
-
-
-
-    /** Received from the socket when a read-timeout occured */
-    void readTimeout();
-
-
-
-
-    void websocketTextMessage(const QString &data);
-
-    void websocketbinaryFrameReceived(const QByteArray &data, bool final );
-
-    /** Received from the socket when a connection has been closed */
-    void disconnected();
-
-    void preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator);
-    void encrypted();
-    void sslErrors(const QList<QSslError> &errors);
 };
 
 } // end of namespace

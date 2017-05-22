@@ -20,10 +20,11 @@ void ExecutiveTask::run()
 {
 //    //m_Response.setHeader("Content-Type", "image/jpeg");
 //    QTemporaryFile* file=m_Request.getUploadedFile("file1");
-    qDebug() << "FileName: " << m_File->fileName();
+
     QSharedPointer<QByteArray> buffer;
     if (m_File)
     {
+        qDebug() << "FileName: " << m_File->fileName();
         while (!m_File->atEnd() && !m_File->error())
         {
             buffer = QSharedPointer<QByteArray>( new QByteArray(m_File->read(65536)) );

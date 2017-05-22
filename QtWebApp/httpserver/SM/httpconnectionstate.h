@@ -3,6 +3,8 @@
 #include"httpconnectionhandler.h"
 #include<QString>
 
+namespace stefanfrings {
+
 class HttpConnectionState
 {
 public:
@@ -19,29 +21,6 @@ protected:
     QString m_StateName;
 };
 
-
-class HttpIdleState:public HttpConnectionState
-{
-public:
-    explicit HttpIdleState(const QString& name ):HttpConnectionState(name){}
-    virtual void handleConnectionEvent( stefanfrings::HttpConnectionHandler &conHndl, const stefanfrings::tSocketDescriptor &socketDescriptor);
-};
-
-class HttpConnectionHandshake:public HttpConnectionState
-{
-public:
-    virtual void handlingLoopEvent( stefanfrings::HttpConnectionHandler &conHndl );
-    virtual void disconnectEvent( stefanfrings::HttpConnectionHandler &conHndl );
-    virtual void readyReadEvent( stefanfrings::HttpConnectionHandler &conHndl );
-};
-
-class HttpGetBody:public HttpConnectionState
-{
-public:
-    virtual void handlingLoopEvent( stefanfrings::HttpConnectionHandler &conHndl );
-    virtual void disconnectEvent( stefanfrings::HttpConnectionHandler &conHndl );
-    virtual void readyReadEvent( stefanfrings::HttpConnectionHandler &conHndl );
-};
-
+}
 
 #endif // HTTPCONNECTIONSTATE_H

@@ -72,7 +72,9 @@ void HttpConnectionHandlerPool::pollingPool()
     foreach(HttpConnectionHandler* handler, pool)
     {
         if( handler->isBusy() ){
-            Ret = Ret || handler->handlerSM();
+            if( handler->handlerSM() ){
+                Ret = true;
+            }
         }
     }
     if( Ret)
