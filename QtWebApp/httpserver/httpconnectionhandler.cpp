@@ -27,6 +27,7 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
                     new HttpConnectionHandshakeState("CONNECT_HANDSHAKE"),
                     new HttpReadRequestState("HTTP_GET_REQUEST"),
                     new HttpHandleRequestState("HTTP_HANDLE_REQUEST"),
+                    /*TODO: TBD*/
                     new HttpConnectionState("WEBSOCKET_HANDLING"),
                     new HttpConnectionState("HTTP_ABORT"),
                     new HttpConnectionState("CLOSE_CONNECTION"),
@@ -92,6 +93,8 @@ void HttpConnectionHandler::createSocket()
 #if defined SUPERVERBOSE
             qDebug("HttpConnectionHandler (%p): SSL is enabled", this);
 #endif
+            socket->setReadBufferSize( 10000000 );
+            qDebug() << "In Buffer size: "  << socket->readBufferSize();
             return;
         }
     #endif
