@@ -69,6 +69,73 @@ QString searchConfigFile()
 }
 
 
+#include<QThreadPool>
+#include<QRunnable>
+#include<QElapsedTimer>
+
+class Test:public QRunnable
+{
+public:
+    Test(){
+        m_cur = cur;
+        cur++;
+    }
+
+
+    virtual void run(){
+//        QThread::msleep( 2000);
+//        for( int i=0;i<300;i++){
+//           QThread::msleep( 100);
+//           qDebug() << "Test " << m_cur;
+//        }
+        qDebug() << "Run Task " << m_cur;
+        QFile file("C:\\Projects\\GitHub\\QtWebApp\\build-Demo1-Desktop_Qt_5_7_0_MinGW_32bit-Debug\\debug\\test.zip");
+
+        if (!file.open(QIODevice::ReadOnly )){
+            qDebug() << "Can't open file in: " << file.fileName();
+            return;
+        }
+        QFile fileout( QString("C:\\Projects\\GitHub\\QtWebApp\\build-Demo1-Desktop_Qt_5_7_0_MinGW_32bit-Debug\\debug\\test%1.zip").arg(m_cur) );
+        if (!fileout.open(QIODevice::WriteOnly )){
+            qDebug() << "Can't open out file : " << fileout.fileName();
+            return;
+        }
+        while (!file.atEnd()) {
+            fileout.write( file.read(1000000) );
+        }
+        file.close();
+        fileout.close();
+        qDebug() << "Finish Task " << m_cur;
+    }
+protected:
+   static int cur;
+   int m_cur;
+};
+int Test::cur;
+
+void threadPollTesting(){
+    QThreadPool::globalInstance()->setMaxThreadCount(1000);
+    QElapsedTimer timer;
+    qint64 mSec;
+    timer.start();
+
+
+
+    qDebug() << "ThreadPool task started: ";
+    qDebug() << "MaxThreads " << QThreadPool::globalInstance()->maxThreadCount();
+    for( int i=0; i < 300; i++){
+        if( !QThreadPool::globalInstance()->tryStart( new Test()  ) ){
+            qDebug() << "Can't run Task " << i;
+        }
+    }
+    QThreadPool::globalInstance()->waitForDone(-1);
+
+    mSec = timer.elapsed();
+
+    qDebug() << "ThreadPool task finished: ";
+    qDebug() << "Time for execution[sec]: " << ((double)mSec)/1000.0;
+}
+
 /**
   Entry point of the program.
 */
@@ -81,7 +148,7 @@ int main(int argc, char *argv[])
 
     // Find the configuration file
     QString configFileName=searchConfigFile();
-
+threadPollTesting();
     // Configure logging into a file
     /*
     QSettings* logSettings=new QSettings(configFileName,QSettings::IniFormat,&app);
