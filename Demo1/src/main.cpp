@@ -1,6 +1,6 @@
 /**
   @file
-  @author Stefan Frings
+  @author Stefan Frings test
 */
 
 #include <QCoreApplication>
