@@ -23,7 +23,7 @@ SOURCES += src/main.cpp \
            src/controller/sessioncontroller.cpp
 
 OTHER_FILES += etc/* etc/docroot/* etc/templates/* etc/ssl/* logs/* ../readme.txt
-
+QMAKE_CXXFLAGS += -std=c++11
 #---------------------------------------------------------------------------------------
 # The following lines include the sources of the QtWebAppLib library
 #---------------------------------------------------------------------------------------
