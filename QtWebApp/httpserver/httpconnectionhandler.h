@@ -17,7 +17,6 @@
 
 class QTcpSocket;
 class QWebSocket;
-#define SATES_DEFINED
 
 namespace stefanfrings {
 class HttpConnectionState;
@@ -120,9 +119,7 @@ protected:
     void requestExecuteSM();
 
     HttpConnectionStateEnum readHttpRequest();
-#if !defined(SATES_DEFINED)
-    HttpConnectionHandler::HttpConnectionStateEnum handleHttpRequest();
-#endif
+
     HttpConnectionHandler::HttpConnectionStateEnum httpAbort();
 private slots:
 

@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 
     // Find the configuration file
     QString configFileName=searchConfigFile();
-threadPollTesting();
+threadPollTesting();//Dell Me
     // Configure logging into a file
     /*
     QSettings* logSettings=new QSettings(configFileName,QSettings::IniFormat,&app);
