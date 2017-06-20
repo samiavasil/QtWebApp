@@ -71,7 +71,7 @@ void HttpConnectionHandlerPool::pollingPool()
     bool Ret = false;
     foreach(HttpConnectionHandler* handler, pool)
     {
-        if( handler->isBusy()/*TODO: && handler->IsDirty()*/ ){
+        if( handler->isBusy() && handler->IsDirty()/*TODO:*/ ){
             if( handler->handlerSM() ){
                 Ret = true;
             }

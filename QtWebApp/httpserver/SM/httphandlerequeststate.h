@@ -1,10 +1,10 @@
 #ifndef HTTPHANDLEREQUESTSTATE_H
 #define HTTPHANDLEREQUESTSTATE_H
-#include"httpconnectionstate.h"
+#include"connectionstate.h"
 
-namespace stefanfrings {
+namespace SM {
 
-class HttpHandleRequestState:public HttpConnectionState
+class HttpHandleRequestState:public ConnectionState
 {
 public:
     explicit     HttpHandleRequestState(const QString& name );

@@ -51,6 +51,8 @@ FileUploadController::FileUploadController()
 
 void FileUploadController::finished()
 {
+    disconnect( m_CurrentTask,SIGNAL(finished()),this, SLOT(finished()) );
+    disconnect( m_CurrentTask,SIGNAL(write(QSharedPointer<QByteArray>)),this, SLOT(write(QSharedPointer<QByteArray>)) );
     m_CurrentTask->deleteLater();
     m_CurrentTask = NULL;
     m_Finished = true;

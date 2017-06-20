@@ -432,9 +432,9 @@ QByteArray HttpRequest::urlDecode(const QByteArray source)
 
 
 
-class MultiPartFilePatseTask: public Task{
+class MultiPartFileParseTask: public Task{
 public:
-    MultiPartFilePatseTask( QTemporaryFile* tFile,
+    MultiPartFileParseTask( QTemporaryFile* tFile,
           const QByteArray& bound,
           QMultiMap<QByteArray, QByteArray>& params,
           QMap<QByteArray,QTemporaryFile*>& upFiles,
@@ -581,8 +581,8 @@ bool HttpRequest::parseMultiPartFile()
 {
     bool Ret = true;
     if( 0 == m_MultiPartFileTaskRunner ){
-        m_MultiPartFileTaskRunner = new AsynchronousTaskRunner( new MultiPartFilePatseTask(tempFile , boundary ,parameters ,uploadedFiles ,currentSize ) );
-        QObject::connect( m_MultiPartFileTaskRunner,SIGNAL(AsynchronousTaskFinished()),m_ConHnd,SLOT(AsynchronousTaskFinished()) );
+        m_MultiPartFileTaskRunner = new AsynchronousTaskRunner( new MultiPartFileParseTask(tempFile , boundary ,parameters ,uploadedFiles ,currentSize ) );
+        //Not needed -> QObject::connect( m_MultiPartFileTaskRunner,SIGNAL(AsynchronousTaskFinished()),m_ConHnd,SLOT(AsynchronousTaskFinished()) );
         m_MultiPartFileTaskRunner->StartRun();
     }
 

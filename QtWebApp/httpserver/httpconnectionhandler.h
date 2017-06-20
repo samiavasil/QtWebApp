@@ -18,8 +18,19 @@
 class QTcpSocket;
 class QWebSocket;
 
+namespace SM {
+    class ConnectionState;
+    class HttpIdleState;
+    class HttpGetRequestState;
+    class HttpConnectionHandshakeState;
+    class HttpReadRequestState;
+    class HttpHandleRequestState;
+    class WebSocketRequestState;
+}
+
+
 namespace stefanfrings {
-class HttpConnectionState;
+
 class HttpRequest;
 class HttpResponse;
 
@@ -54,12 +65,14 @@ class DECLSPEC HttpConnectionHandler : public QObject
 
 {
     Q_OBJECT
-    friend class HttpConnectionState;
-    friend class HttpIdleState;
-    friend class HttpGetRequestState;
-    friend class HttpConnectionHandshakeState;
-    friend class HttpReadRequestState;
-    friend class HttpHandleRequestState;
+
+    friend class SM::ConnectionState;
+    friend class SM::HttpIdleState;
+    friend class SM::HttpGetRequestState;
+    friend class SM::HttpConnectionHandshakeState;
+    friend class SM::HttpReadRequestState;
+    friend class SM::HttpHandleRequestState;
+    friend class SM::WebSocketRequestState;
 
     Q_DISABLE_COPY(HttpConnectionHandler)
 public:
@@ -68,6 +81,7 @@ public:
         CONNECT_HANDSHAKE_STATE,
         HTTP_GET_REQUEST_STATE,
         HTTP_HANDLE_REQUEST_STATE,
+        WEBSOCKET_REQUEST_STATE,
         WEBSOCKET_HANDLING_STATE,
         HTTP_ABORT_STATE,
         CLOSE_CONNECTION_STATE,
@@ -184,9 +198,9 @@ private:
 
     bool m_Dirty;
 
-    HttpConnectionState* m_CurrentConnectionState;
+    SM::ConnectionState* m_CurrentConnectionState;
 
-    HttpConnectionState* const  m_AllStates[STATES_NUM];
+    SM::ConnectionState* const  m_AllStates[STATES_NUM];
 
 };
 

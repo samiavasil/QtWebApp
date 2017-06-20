@@ -8,12 +8,12 @@
 #include "httprequest.h"
 #include "qwebsocket.h"
 #include <QTcpSocket>
-#include <SM/httpconnectionstate.h>
+#include <SM/connectionstate.h>
 #include <SM/httpidlestate.h>
 #include <SM/httpconnectionhandshakestate.h>
 #include <SM/httpreadrequeststate.h>
 #include <SM/httphandlerequeststate.h>
-
+#include <SM/websocketrequeststate.h>
 
 namespace stefanfrings{
 
@@ -23,14 +23,15 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
       m_serverName("Websocket Test Server"),
       socket(NULL),
       m_WebSocket(NULL),
-      m_AllStates({ new HttpIdleState("IDLE"),
-                    new HttpConnectionHandshakeState("CONNECT_HANDSHAKE"),
-                    new HttpReadRequestState("HTTP_GET_REQUEST"),
-                    new HttpHandleRequestState("HTTP_HANDLE_REQUEST"),
+      m_AllStates({ new SM::HttpIdleState("IDLE"),
+                    new SM::HttpConnectionHandshakeState("CONNECT_HANDSHAKE"),
+                    new SM::HttpReadRequestState("HTTP_GET_REQUEST"),
+                    new SM::HttpHandleRequestState("HTTP_HANDLE_REQUEST"),
+                    new SM::WebSocketRequestState("WEBSOCKET_REQUEST_STATE"),
                     /*TODO: TBD*/
-                    new HttpConnectionState("WEBSOCKET_HANDLING"),
-                    new HttpConnectionState("HTTP_ABORT"),
-                    new HttpConnectionState("CLOSE_CONNECTION"),
+                    new SM::ConnectionState("WEBSOCKET_HANDLING"),
+                    new SM::ConnectionState("HTTP_ABORT"),
+                    new SM::ConnectionState("CLOSE_CONNECTION"),
                     })
 
 {
@@ -93,7 +94,7 @@ void HttpConnectionHandler::createSocket()
 #if defined SUPERVERBOSE
             qDebug("HttpConnectionHandler (%p): SSL is enabled", this);
 #endif
-            socket->setReadBufferSize( 10000000 );
+            socket->setReadBufferSize( 100000 );
             qDebug() << "In Buffer size: "  << socket->readBufferSize();
             return;
         }
@@ -121,7 +122,7 @@ void HttpConnectionHandler::encrypted()
     qDebug() << "SSL ENCRYPTED!!!!!!!!!!!!!!";
 #endif
     connect(sslSocket, SIGNAL(readyRead()), SLOT(readyRead()), Qt::QueuedConnection);
-    connect(sslSocket, SIGNAL(bytesWritten(qint64)), SLOT(), Qt::QueuedConnection);
+    connect(sslSocket, SIGNAL(bytesWritten(qint64)), SLOT(bytesWritten(quint64)), Qt::QueuedConnection);
     connect(sslSocket, SIGNAL(disconnected()), SLOT(disconnected()), Qt::QueuedConnection );
 }
 
@@ -282,6 +283,7 @@ HttpConnectionHandler::HttpConnectionStateEnum HttpConnectionHandler::State() co
 
 void HttpConnectionHandler::setState(const HttpConnectionStateEnum &State)
 {
+    qDebug() << "HttpConnectionHandler change state to: " << State;
     m_State = State;
     m_CurrentConnectionState = m_AllStates[State];
 }

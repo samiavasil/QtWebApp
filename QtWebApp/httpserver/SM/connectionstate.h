@@ -3,13 +3,13 @@
 #include"httpconnectionhandler.h"
 #include<QString>
 
-namespace stefanfrings {
+namespace SM {
 
-class HttpConnectionState
+class ConnectionState
 {
 public:
-    explicit HttpConnectionState(const QString& name );
-    virtual ~HttpConnectionState();
+    explicit ConnectionState(const QString& name );
+    virtual ~ConnectionState();
     virtual void handleConnectionEvent( stefanfrings::HttpConnectionHandler &conHndl, const stefanfrings::tSocketDescriptor &socketDescriptor);
     virtual void handlingLoopEvent( stefanfrings::HttpConnectionHandler &conHndl );
     virtual void disconnectEvent( stefanfrings::HttpConnectionHandler &conHndl );

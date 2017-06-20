@@ -1,29 +1,29 @@
-#include "httpconnectionstate.h"
+#include "connectionstate.h"
 #include"httpconnectionhandler.h"
 #include<QDebug>
 
-namespace stefanfrings {
+namespace SM {
 
-HttpConnectionState::HttpConnectionState(const QString &name):m_StateName(name){
+ConnectionState::ConnectionState(const QString &name):m_StateName(name){
 
 }
 
-HttpConnectionState::~HttpConnectionState()
+ConnectionState::~ConnectionState()
 {
 
 }
 
-void HttpConnectionState::handleConnectionEvent(stefanfrings::HttpConnectionHandler &conHndl, const stefanfrings::tSocketDescriptor &socketDescriptor){
+void ConnectionState::handleConnectionEvent(stefanfrings::HttpConnectionHandler &conHndl, const stefanfrings::tSocketDescriptor &socketDescriptor){
     qDebug() << "Warning: " << "Event handleConnection was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info:  socketDescriptor = " << socketDescriptor << "  HttpConnectionHandler = " << &conHndl;
 }
 
-void HttpConnectionState::handlingLoopEvent(stefanfrings::HttpConnectionHandler &conHndl){
+void ConnectionState::handlingLoopEvent(stefanfrings::HttpConnectionHandler &conHndl){
     qDebug() << "Warning: " << "Event handlingLoopEvent was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info:  HttpConnectionHandler = " << &conHndl;
 }
 
-void HttpConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHndl){
+void ConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHndl){
 //#if defined SUPERVERBOSE
     qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,conHndl.m_type);
 //#endif
@@ -52,17 +52,17 @@ void HttpConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &c
     conHndl.currentResponse = 0;
 }
 
-void HttpConnectionState::readyReadEvent(stefanfrings::HttpConnectionHandler &conHndl){
+void ConnectionState::readyReadEvent(stefanfrings::HttpConnectionHandler &conHndl){
     qDebug() << "Warning: " << "Event readyReadEvent was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info:  HttpConnectionHandler = " << &conHndl;
 }
 
-void HttpConnectionState::writedDataEvent(stefanfrings::HttpConnectionHandler &conHndl, qint64 bytesWriten){
+void ConnectionState::writedDataEvent(stefanfrings::HttpConnectionHandler &conHndl, qint64 bytesWriten){
     qDebug() << "Warning: " << "Event writedDataEvent was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
 }
 
-void HttpConnectionState::asynchronousWorkerEvent(stefanfrings::HttpConnectionHandler &conHndl){
+void ConnectionState::asynchronousWorkerEvent(stefanfrings::HttpConnectionHandler &conHndl){
     qDebug() << "Warning: " << "Event asynchronousWorkerEvent was received in not appropriate state '" << m_StateName << "':";
     qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
 }

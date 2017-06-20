@@ -1,14 +1,14 @@
 #include "httphandlerequeststate.h"
 
-namespace stefanfrings {
+namespace SM {
 
-HttpHandleRequestState::HttpHandleRequestState(const QString &name):HttpConnectionState(name){}
+HttpHandleRequestState::HttpHandleRequestState(const QString &name):ConnectionState(name){}
 
-void HttpHandleRequestState::handlingLoopEvent(HttpConnectionHandler &conHndl)
+void HttpHandleRequestState::handlingLoopEvent(  stefanfrings::HttpConnectionHandler &conHndl )
 {
-    conHndl.m_Dirty = false;
+    conHndl.m_Dirty = true;
     // If the request is complete, let the request mapper dispatch it
-    if( conHndl.currentRequest->getStatus()!=HttpRequest::complete )
+    if( conHndl.currentRequest->getStatus() !=  stefanfrings::HttpRequest::complete )
     {
         qDebug() << "Wrong currentRequest status aborting !!";
         conHndl.httpAbort();
@@ -18,7 +18,7 @@ void HttpHandleRequestState::handlingLoopEvent(HttpConnectionHandler &conHndl)
     if( 0 == conHndl.currentResponse )
     {
         // Copy the Connection:close header to the response
-        conHndl.currentResponse = new HttpResponse(conHndl.socket);
+        conHndl.currentResponse = new  stefanfrings::HttpResponse(conHndl.socket);
         bool closeConnection=QString::compare(conHndl.currentRequest->getHeader("Connection"),"close",Qt::CaseInsensitive)==0;
         if( closeConnection )
         {
@@ -41,12 +41,12 @@ void HttpHandleRequestState::handlingLoopEvent(HttpConnectionHandler &conHndl)
     // Call the request mapper
     try
     {
-        HttpRequestHandler::ReqHandle_t reqRet = conHndl.requestHandler->service(*conHndl.currentRequest, *conHndl.currentResponse);
-        if( HttpRequestHandler::WAIT == reqRet )
+         stefanfrings::HttpRequestHandler::ReqHandle_t reqRet = conHndl.requestHandler->service(*conHndl.currentRequest, *conHndl.currentResponse);
+        if(  stefanfrings::HttpRequestHandler::WAIT == reqRet )
         {
             return;
         }
-        else if( HttpRequestHandler::ERROR == reqRet ){
+        else if(  stefanfrings::HttpRequestHandler::ERROR == reqRet ){
             //TODO: TBD some error. Maybe return some http error....Or try to handle again and after that return http error
             qDebug() << "HttpRequestHandler::ERROR: Something is wrong....TODO: Fix error";
             return;
@@ -111,7 +111,7 @@ void HttpHandleRequestState::handlingLoopEvent(HttpConnectionHandler &conHndl)
     conHndl.setState( conHndl.HTTP_GET_REQUEST_STATE );
 }
 
-void HttpHandleRequestState::readyReadEvent(HttpConnectionHandler &conHndl)
+void HttpHandleRequestState::readyReadEvent(  stefanfrings::HttpConnectionHandler &conHndl)
 {
     conHndl.m_Dirty = true;
 

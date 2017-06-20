@@ -22,11 +22,12 @@ HEADERS += $$PWD/httpglobal.h \
            $$PWD/staticfilecontroller.h \
     $$PWD/statemachine.h \
     $$PWD/asynchronoustaskrunner.h \
-    $$PWD/SM/httpconnectionstate.h \
     $$PWD/SM/httpidlestate.h \
     $$PWD/SM/httpreadrequeststate.h \
     $$PWD/SM/httphandlerequeststate.h \
-    $$PWD/SM/httpconnectionhandshakestate.h
+    $$PWD/SM/httpconnectionhandshakestate.h \
+    $$PWD/SM/websocketrequeststate.h \
+    $$PWD/SM/connectionstate.h
 
 SOURCES += $$PWD/httpglobal.cpp \
            $$PWD/httplistener.cpp \
@@ -41,8 +42,9 @@ SOURCES += $$PWD/httpglobal.cpp \
            $$PWD/staticfilecontroller.cpp \
     $$PWD/statemachine.cpp \
     $$PWD/asynchronoustaskrunner.cpp \
-    $$PWD/SM/httpconnectionstate.cpp \
     $$PWD/SM/httpidlestate.cpp \
     $$PWD/SM/httpreadrequeststate.cpp \
     $$PWD/SM/httphandlerequeststate.cpp \
-    $$PWD/SM/httpconnectionhandshakestate.cpp
+    $$PWD/SM/httpconnectionhandshakestate.cpp \
+    $$PWD/SM/websocketrequeststate.cpp \
+    $$PWD/SM/connectionstate.cpp

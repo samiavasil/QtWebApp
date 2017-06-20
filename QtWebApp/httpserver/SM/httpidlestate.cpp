@@ -1,6 +1,6 @@
 #include "httpidlestate.h"
 
-namespace stefanfrings {
+namespace SM {
 void HttpIdleState::handleConnectionEvent(stefanfrings::HttpConnectionHandler &conHndl, const stefanfrings::tSocketDescriptor &socketDescriptor)
 {
 

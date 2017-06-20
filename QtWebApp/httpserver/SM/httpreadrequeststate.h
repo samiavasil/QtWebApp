@@ -1,10 +1,10 @@
 #ifndef HTTPREADREQUESTSTATE_H
 #define HTTPREADREQUESTSTATE_H
 
-#include"httpconnectionstate.h"
+#include"connectionstate.h"
 
-namespace stefanfrings {
-class HttpReadRequestState:public HttpConnectionState
+namespace SM {
+class HttpReadRequestState:public ConnectionState
 {
 public:
     explicit     HttpReadRequestState(const QString& name );

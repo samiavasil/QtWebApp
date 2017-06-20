@@ -1,10 +1,10 @@
 #ifndef HTTPCONNECTIONHANDSHAKESTATE_H
 #define HTTPCONNECTIONHANDSHAKESTATE_H
-#include"httpconnectionstate.h"
+#include"connectionstate.h"
 
 
-namespace stefanfrings {
-class HttpConnectionHandshakeState:public HttpConnectionState
+namespace SM {
+class HttpConnectionHandshakeState:public ConnectionState
 {
 public:
     explicit     HttpConnectionHandshakeState(const QString& name );

@@ -1,11 +1,11 @@
 #include "httpconnectionhandshakestate.h"
 
 
-namespace stefanfrings {
+namespace SM {
 
-HttpConnectionHandshakeState::HttpConnectionHandshakeState(const QString &name):HttpConnectionState(name){}
+HttpConnectionHandshakeState::HttpConnectionHandshakeState(const QString &name):ConnectionState(name){}
 
-void HttpConnectionHandshakeState::handlingLoopEvent(HttpConnectionHandler &conHndl)
+void HttpConnectionHandshakeState::handlingLoopEvent(  stefanfrings::HttpConnectionHandler &conHndl )
 {
     if ( !conHndl.socket->canReadLine() )
     {
@@ -14,7 +14,7 @@ void HttpConnectionHandshakeState::handlingLoopEvent(HttpConnectionHandler &conH
     if( conHndl.websocketHandshake( conHndl.socket ) )
     {
         conHndl.m_type  = conHndl.WEBSOCKET;
-        conHndl.setState(conHndl.WEBSOCKET_HANDLING_STATE);
+        conHndl.setState(conHndl.WEBSOCKET_REQUEST_STATE);
     }
     else
     {
@@ -31,7 +31,7 @@ void HttpConnectionHandshakeState::handlingLoopEvent(HttpConnectionHandler &conH
 }
 
 
-void HttpConnectionHandshakeState::readyReadEvent(HttpConnectionHandler &conHndl)
+void HttpConnectionHandshakeState::readyReadEvent(  stefanfrings::HttpConnectionHandler &conHndl )
 {
     conHndl.m_Dirty = true;
 }
