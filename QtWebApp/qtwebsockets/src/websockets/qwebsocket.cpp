@@ -317,24 +317,23 @@ QWebSocket::~QWebSocket()
     d->closeGoingAway();
 }
 
-QWebSocket *QWebSocket::upgradeFrom(QTcpSocket *tcpSocket, const QString& serverName,  bool isSecure, QObject *parent )
+QWebSocket *QWebSocket::upgradeFrom(QTcpSocket *tcpSocket, QWebSocketHandshakeRequest& wsRequest, const QString& serverName, QObject *parent )
 {
     QWebSocket* wSocket = NULL;
     qDebug() << "HTTP signature detected, using WebSocket handler";
-    QWebSocketHandshakeRequest request(tcpSocket->peerPort(), isSecure );
     QTextStream textStream(tcpSocket);
-    request.readHandshake(textStream, MAX_HEADERLINE_LENGTH, MAX_HEADERLINES);
+    wsRequest.readHandshake(textStream, MAX_HEADERLINE_LENGTH, MAX_HEADERLINES);
 
-    if (request.isValid())
+    if (wsRequest.isValid())
     {
 
-        QWebSocketCorsAuthenticator corsAuthenticator(request.origin());
+        QWebSocketCorsAuthenticator corsAuthenticator(wsRequest.origin());
         //TODO    Q_EMIT q->originAuthenticationRequired(&corsAuthenticator);
         QList<QWebSocketProtocol::Version> supportedVersions;
         supportedVersions << QWebSocketProtocol::currentVersion();	//we only support V13
         QStringList supportedProtocols;	 //no protocols are currently supported
         QStringList supportedExtensions; //no extensions are currently supported
-        QWebSocketHandshakeResponse response(request,
+        QWebSocketHandshakeResponse response(wsRequest,
                                              serverName,
                                              corsAuthenticator.allowed(),
                                              supportedVersions,
@@ -349,7 +348,7 @@ QWebSocket *QWebSocket::upgradeFrom(QTcpSocket *tcpSocket, const QString& server
 
             if( response.canUpgrade() )
             {
-                wSocket = QWebSocketPrivate::upgradeFrom( tcpSocket, request, response, parent);
+                wSocket = QWebSocketPrivate::upgradeFrom( tcpSocket, wsRequest, response, parent);
             }
             else
             {

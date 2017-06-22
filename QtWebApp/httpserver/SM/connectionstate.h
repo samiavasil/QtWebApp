@@ -16,7 +16,8 @@ public:
     virtual void readyReadEvent( stefanfrings::HttpConnectionHandler &conHndl );
     virtual void writedDataEvent(stefanfrings::HttpConnectionHandler &conHndl , qint64 bytesWriten);
     virtual void asynchronousWorkerEvent( stefanfrings::HttpConnectionHandler &conHndl );
-
+    virtual void websocketbinaryFrameReceivedEvent(stefanfrings::HttpConnectionHandler &conHndl, const QByteArray& data, bool final );
+    virtual void websocketTextMessageEvent( stefanfrings::HttpConnectionHandler &conHndl, const QString & data);
 protected:
     QString m_StateName;
 };

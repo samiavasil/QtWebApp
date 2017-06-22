@@ -72,7 +72,7 @@ public:
                         QWebSocketProtocol::Version version = QWebSocketProtocol::VersionLatest,
                         QObject *parent = Q_NULLPTR);
     virtual ~QWebSocket();
-    static QWebSocket *upgradeFrom(QTcpSocket *tcpSocket, const QString& serverName,  bool isSecure,
+    static QWebSocket *upgradeFrom(QTcpSocket *tcpSocket, QWebSocketHandshakeRequest &wsRequest, const QString& serverName,
                                    QObject *parent = Q_NULLPTR) Q_REQUIRED_RESULT;
     void abort();
     QAbstractSocket::SocketError error() const;

@@ -67,6 +67,18 @@ void ConnectionState::asynchronousWorkerEvent(stefanfrings::HttpConnectionHandle
     qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
 }
 
+void ConnectionState::websocketbinaryFrameReceivedEvent(stefanfrings::HttpConnectionHandler &conHndl, const QByteArray &data, bool final)
+{
+    qDebug() << "Warning: " << "Event websocketbinaryFrameReceived was received in not appropriate state '" << m_StateName << "':";
+    qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
+}
+
+void ConnectionState::websocketTextMessageEvent(stefanfrings::HttpConnectionHandler &conHndl, const QString &data)
+{
+    qDebug() << "Warning: " << "Event websocketTextMessage was received in not appropriate state '" << m_StateName << "':";
+    qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
+}
+
 
 
 

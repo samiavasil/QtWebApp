@@ -175,22 +175,6 @@ void HttpConnectionHandler::readTimeout()
     //socket->write("HTTP/1.1 408 request timeout\r\nConnection: close\r\n\r\n408 request timeout\r\n");
 disconnected();
 
-//TODO CHECK THIS??
-#if 0
-    if( WEBSOCKET == m_type )
-    {
-         m_WebSocket->close();
-    }
-    else
-    {
-        socket->flush();
-        socket->disconnectFromHost();
-    }
-    delete currentRequest;
-    currentRequest=0;
-    delete currentResponse;
-    currentResponse = 0;
-#endif
 }
 
 
@@ -215,7 +199,9 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
 
         if( line.startsWith("GET ") && line.contains("Upgrade: websocket") )
         {
-            pWebSocket = QWebSocket::upgradeFrom( pTcpSocket , m_serverName, isSecure);
+            TODO: Towa !!!!
+            QWebSocketHandshakeRequest wsRequest(pTcpSocket->peerPort(), isSecure );
+            pWebSocket = QWebSocket::upgradeFrom( pTcpSocket , wsRequest, m_serverName );
             if (pWebSocket)
             {
                 m_WebSocket = pWebSocket;
@@ -289,24 +275,12 @@ void HttpConnectionHandler::setState(const HttpConnectionStateEnum &State)
 }
 
 
-
 void HttpConnectionHandler::websocketTextMessage( const QString & data)
 {
     // Call the request mapper
     try
     {
-        if(data=="ping")
-        {
-            m_WebSocket->sendTextMessage("pong");
-        }
-        else
-        {
-         //   m_WebSocket->sendTextMessage(data);
-            requestHandler->websocketTextMessage( m_WebSocket, data );
-        }
-        /*Reload read timeout*/
-        int readTimeout=settings->value("readTimeout",10000).toInt();
-        readTimer.start(readTimeout);
+        m_CurrentConnectionState->websocketTextMessageEvent( *this, data );
     }
     catch (...)
     {
@@ -317,14 +291,10 @@ void HttpConnectionHandler::websocketTextMessage( const QString & data)
 
 void HttpConnectionHandler::websocketbinaryFrameReceived(const QByteArray& data, bool final )
 {
-    qDebug() << "Websocket Bynary Message:";
     // Call the request mapper
     try
     {
-        requestHandler->websocketbinaryFrameReceived( m_WebSocket, data, final );
-        /*Reload read timeout*/
-        int readTimeout=settings->value("readTimeout",10000).toInt();
-        readTimer.start(readTimeout);
+        m_CurrentConnectionState->websocketbinaryFrameReceivedEvent( *this, data, final );
     }
     catch (...)
     {
