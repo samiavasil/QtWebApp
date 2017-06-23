@@ -96,9 +96,6 @@ private:
     /** Time when sessions expire (in ms)*/
     int expirationTime;
 
-    /** Used to synchronize threads */
-    QMutex mutex;
-
 private slots:
 
     /** Called every minute to cleanup expired sessions. */

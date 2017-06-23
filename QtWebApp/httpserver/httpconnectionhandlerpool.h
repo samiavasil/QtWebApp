@@ -8,7 +8,6 @@
 #include "httpglobal.h"
 #include "httpconnectionhandler.h"
 class QSettings;
-
 namespace stefanfrings {
 
 /**
@@ -80,9 +79,6 @@ private:
 
     /** Timer to clean-up unused connection handler */
     QTimer cleanupTimer;
-
-    /** Used to synchronize threads */
-    QMutex mutex;
 
     /** The SSL configuration (certificate, key and other settings) */
     QSslConfiguration* sslConfiguration;
