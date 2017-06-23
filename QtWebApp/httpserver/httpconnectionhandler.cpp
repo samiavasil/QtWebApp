@@ -13,7 +13,7 @@
 #include <SM/httpconnectionhandshakestate.h>
 #include <SM/httpreadrequeststate.h>
 #include <SM/httphandlerequeststate.h>
-#include <SM/websocketrequeststate.h>
+#include <SM/websockethandlingstate.h>
 
 namespace stefanfrings{
 
@@ -23,11 +23,12 @@ HttpConnectionHandler::HttpConnectionHandler( QSettings* settings, HttpRequestHa
       m_serverName("Websocket Test Server"),
       socket(NULL),
       m_WebSocket(NULL),
+      m_WsHandshakeRequest(NULL),
       m_AllStates({ new SM::HttpIdleState("IDLE"),
                     new SM::HttpConnectionHandshakeState("CONNECT_HANDSHAKE"),
                     new SM::HttpReadRequestState("HTTP_GET_REQUEST"),
                     new SM::HttpHandleRequestState("HTTP_HANDLE_REQUEST"),
-                    new SM::WebSocketRequestState("WEBSOCKET_REQUEST_STATE"),
+                    new SM::WebSocketHandlingState("WEBSOCKET_REQUEST_STATE"),
                     /*TODO: TBD*/
                     new SM::ConnectionState("WEBSOCKET_HANDLING"),
                     new SM::ConnectionState("HTTP_ABORT"),
@@ -110,9 +111,9 @@ void HttpConnectionHandler::createSocket()
 
 void HttpConnectionHandler::preSharedKeyAuthenticationRequired(QSslPreSharedKeyAuthenticator *authenticator)
 {
-#if defined SUPERVERBOSE
-    qDebug() << "preSharedKeyAuthenticationRequired required";
-#endif
+//#if defined SUPERVERBOSE
+    qDebug() << "preSharedKeyAuthenticationRequired required BUT NOT IMPLEMENTED!!!!";
+//#endif
 }
 
 void HttpConnectionHandler::encrypted()
@@ -122,8 +123,8 @@ void HttpConnectionHandler::encrypted()
     qDebug() << "SSL ENCRYPTED!!!!!!!!!!!!!!";
 #endif
     connect(sslSocket, SIGNAL(readyRead()), SLOT(readyRead()), Qt::QueuedConnection);
-    connect(sslSocket, SIGNAL(bytesWritten(qint64)), SLOT(bytesWritten(quint64)), Qt::QueuedConnection);
-    connect(sslSocket, SIGNAL(disconnected()), SLOT(disconnected()), Qt::QueuedConnection );
+    connect(sslSocket, SIGNAL(bytesWritten(qint64)), this, SLOT(bytesWritten(qint64)), Qt::QueuedConnection);
+    connect(sslSocket, SIGNAL(disconnected()), this, SLOT(disconnected()), Qt::QueuedConnection );
 }
 
 void HttpConnectionHandler::sslErrors(const QList<QSslError> &errors)
@@ -144,7 +145,7 @@ void HttpConnectionHandler::readyRead()
     m_CurrentConnectionState->readyReadEvent(*this);
 }
 
-void HttpConnectionHandler::bytesWritten(quint64 bytesWriten)
+void HttpConnectionHandler::bytesWritten(qint64 bytesWriten)
 {
     m_CurrentConnectionState->writedDataEvent(*this,bytesWriten);
 }
@@ -195,36 +196,30 @@ bool HttpConnectionHandler::websocketHandshake( QTcpSocket *pTcpSocket )
 
     if( pTcpSocket )
     {
-        QByteArray line = pTcpSocket->peek(4096);
+        //QByteArray line = pTcpSocket->peek(4096);
 
-        if( line.startsWith("GET ") && line.contains("Upgrade: websocket") )
+        QWebSocketHandshakeRequest* wsRequest = new QWebSocketHandshakeRequest(pTcpSocket->peerPort(), isSecure );
+        pWebSocket = QWebSocket::upgradeFrom( pTcpSocket , *wsRequest, m_serverName );
+        if (pWebSocket)
         {
-            TODO: Towa !!!!
-            QWebSocketHandshakeRequest wsRequest(pTcpSocket->peerPort(), isSecure );
-            pWebSocket = QWebSocket::upgradeFrom( pTcpSocket , wsRequest, m_serverName );
-            if (pWebSocket)
-            {
-                m_WebSocket = pWebSocket;
-                //TODO  Q_EMIT q->newConnection();
-                qDebug("HttpConnectionHandler (%p) change type to WEBSOCKET", this);
-                int readTimeout=settings->value("readTimeout",10000).toInt();
-                readTimer.start(readTimeout);
-                ret = true;
-                qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(readyRead()));
-                qDebug() << disconnect(pTcpSocket, SIGNAL(disconnected()),this, SLOT(disconnected()));
-                connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketTextMessage(QString)));
-                connect(m_WebSocket, SIGNAL(binaryFrameReceived(QByteArray,bool)), SLOT(websocketbinaryFrameReceived(QByteArray,bool)));
-                connect(m_WebSocket, SIGNAL(disconnected()), SLOT(disconnected()));
-            }
-            else
-            {
-                qDebug() << tr("ERROR:  Upgrade to WebSocket failed.");
-                pTcpSocket->close();
-            }
+            m_WebSocket = pWebSocket;
+            //TODO  Q_EMIT q->newConnection();
+            qDebug("HttpConnectionHandler (%p) change type to WEBSOCKET", this);
+            int readTimeout=settings->value("readTimeout",10000).toInt();
+            readTimer.start(readTimeout);
+            ret = true;
+            qDebug() << disconnect(pTcpSocket, SIGNAL(readyRead()),this, SLOT(readyRead()));
+            qDebug() << disconnect(pTcpSocket, SIGNAL(disconnected()),this, SLOT(disconnected()));
+            qDebug() << disconnect(pTcpSocket, SIGNAL(bytesWritten(qint64)),this, SLOT(bytesWritten(qint64)) );
+            connect(m_WebSocket, SIGNAL(textMessageReceived(QString)), SLOT(websocketTextMessage(QString)), Qt::QueuedConnection);
+            connect(m_WebSocket, SIGNAL(binaryFrameReceived(QByteArray,bool)), SLOT(websocketbinaryFrameReceived(QByteArray,bool)), Qt::QueuedConnection);
+            connect(m_WebSocket, SIGNAL(bytesWritten(qint64)),this, SLOT(bytesWritten(qint64)), Qt::QueuedConnection);
+            connect(m_WebSocket, SIGNAL(disconnected()), this, SLOT(disconnected()), Qt::QueuedConnection);
         }
         else
         {
-            qDebug() <<  tr("Not WebSocket Request.");
+            qDebug() << tr("ERROR:  Upgrade to WebSocket failed.");
+            pTcpSocket->close();
         }
     }
     return  ret;
@@ -272,6 +267,7 @@ void HttpConnectionHandler::setState(const HttpConnectionStateEnum &State)
     qDebug() << "HttpConnectionHandler change state to: " << State;
     m_State = State;
     m_CurrentConnectionState = m_AllStates[State];
+    m_Dirty = true;
 }
 
 

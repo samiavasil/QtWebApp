@@ -11,10 +11,14 @@ void HttpConnectionHandshakeState::handlingLoopEvent(  stefanfrings::HttpConnect
     {
         return;
     }
-    if( conHndl.websocketHandshake( conHndl.socket ) )
+    QByteArray line = conHndl.socket->peek(4096);
+    if( line.startsWith("GET ") && line.contains("Upgrade: websocket") )
     {
-        conHndl.m_type  = conHndl.WEBSOCKET;
-        conHndl.setState(conHndl.WEBSOCKET_REQUEST_STATE);
+        if( conHndl.websocketHandshake( conHndl.socket ) )
+        {
+            conHndl.m_type  = conHndl.WEBSOCKET;
+            conHndl.setState(conHndl.WEBSOCKET_REQUEST_STATE);
+        }
     }
     else
     {

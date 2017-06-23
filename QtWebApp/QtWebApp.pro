@@ -34,4 +34,10 @@ include(logging/logging.pri)
 include(httpserver/httpserver.pri)
 include(templateengine/templateengine.pri)
 
+HEADERS += \
+    protocols/protocol.h
+
+SOURCES += \
+    protocols/protocol.cpp
+
 

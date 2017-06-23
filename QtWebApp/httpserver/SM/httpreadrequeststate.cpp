@@ -6,7 +6,7 @@ HttpReadRequestState::HttpReadRequestState(const QString &name):ConnectionState(
 
 void HttpReadRequestState::handlingLoopEvent(  stefanfrings::HttpConnectionHandler &conHndl)
 {
-    conHndl.m_Dirty = true;
+
     if( !conHndl.currentRequest )
     {
         conHndl.currentRequest=new  stefanfrings::HttpRequest(&conHndl,conHndl.settings);
@@ -37,6 +37,12 @@ void HttpReadRequestState::handlingLoopEvent(  stefanfrings::HttpConnectionHandl
         qDebug("HttpConnectionHandler (%p): received request",this);
         conHndl.setState( conHndl.HTTP_HANDLE_REQUEST_STATE );
         return;
+    }
+    if( conHndl.currentRequest->getStatus() ==  stefanfrings::HttpRequest::waitForRequest ){
+        conHndl.m_Dirty = false;
+    }
+    else{
+        conHndl.m_Dirty = true;
     }
 }
 

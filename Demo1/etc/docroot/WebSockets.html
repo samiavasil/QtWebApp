@@ -31,7 +31,7 @@
         if (window.WebSocket) {      
         console.log("WebSocket object is supported in your browser");
         }
-        websocket = new WebSocket( $("#target").val() );
+        websocket = new WebSocket( $("#target").val()/*, "mqtt"*/ );
 
         websocket.onopen = function (evt) {
             onOpen(evt)

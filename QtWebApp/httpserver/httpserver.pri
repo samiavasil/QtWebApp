@@ -2,11 +2,13 @@ INCLUDEPATH += $$PWD
 #INCLUDEPATH += $$PWD/../qtwebsockets/src/websockets
 DEPENDPATH += $$PWD
 include($$PWD/../qtwebsockets/src/websockets/qtwebsockets.pri)
+include($$PWD/../protocols/ptotocols.pri)
+
 QT += network
 
 # Enable very detailed debug messages when compiling the debug version
 CONFIG(debug, debug|release) {
-#    DEFINES += SUPERVERBOSE
+    DEFINES += SUPERVERBOSE
 }
 
 HEADERS += $$PWD/httpglobal.h \
@@ -26,8 +28,9 @@ HEADERS += $$PWD/httpglobal.h \
     $$PWD/SM/httpreadrequeststate.h \
     $$PWD/SM/httphandlerequeststate.h \
     $$PWD/SM/httpconnectionhandshakestate.h \
-    $$PWD/SM/websocketrequeststate.h \
-    $$PWD/SM/connectionstate.h
+    $$PWD/SM/connectionstate.h \
+    $$PWD/SM/websockethandlingstate.h \
+    $$PWD/SM/wsprotocol.h
 
 SOURCES += $$PWD/httpglobal.cpp \
            $$PWD/httplistener.cpp \
@@ -46,5 +49,6 @@ SOURCES += $$PWD/httpglobal.cpp \
     $$PWD/SM/httpreadrequeststate.cpp \
     $$PWD/SM/httphandlerequeststate.cpp \
     $$PWD/SM/httpconnectionhandshakestate.cpp \
-    $$PWD/SM/websocketrequeststate.cpp \
-    $$PWD/SM/connectionstate.cpp
+    $$PWD/SM/connectionstate.cpp \
+    $$PWD/SM/websockethandlingtstate.cpp \
+    $$PWD/SM/wsprotocol.cpp

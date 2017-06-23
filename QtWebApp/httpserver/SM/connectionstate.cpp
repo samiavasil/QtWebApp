@@ -24,15 +24,24 @@ void ConnectionState::handlingLoopEvent(stefanfrings::HttpConnectionHandler &con
 }
 
 void ConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHndl){
-//#if defined SUPERVERBOSE
-    qDebug("!!!!!!!!!!HttpConnectionHandler (%p) type(%d): disconnected", this,conHndl.m_type);
-//#endif
+    if( false == conHndl.busy  ){
+        return;
+    }
+#if defined SUPERVERBOSE
+    qDebug() << "    disconnectEvent() on state: %s" << m_StateName ;
+#endif
     conHndl.readTimer.stop();
 
     if( conHndl.WEBSOCKET == conHndl.m_type )
     {
+        conHndl.m_WebSocket->close();
         conHndl.m_WebSocket->deleteLater();
         conHndl.m_WebSocket = NULL;
+        if( conHndl.m_WsHandshakeRequest )
+        {
+            delete conHndl.m_WsHandshakeRequest;
+            conHndl.m_WsHandshakeRequest = NULL;
+        }
     }
     else
     {
@@ -42,6 +51,7 @@ void ConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHn
     conHndl.m_type  =  conHndl.UNDEFINED;
     conHndl.createSocket();
     conHndl.busy = false;
+    conHndl.m_Dirty = false;
     QObject::disconnect( &conHndl,SIGNAL(signalExecuteSM()),&conHndl,SLOT(handlerSM()) );
     conHndl.setState( conHndl.IDLE_STATE );
 
@@ -50,6 +60,7 @@ void ConnectionState::disconnectEvent(stefanfrings::HttpConnectionHandler &conHn
     conHndl.currentRequest=0;
     delete conHndl.currentResponse;
     conHndl.currentResponse = 0;
+
 }
 
 void ConnectionState::readyReadEvent(stefanfrings::HttpConnectionHandler &conHndl){
@@ -58,8 +69,7 @@ void ConnectionState::readyReadEvent(stefanfrings::HttpConnectionHandler &conHnd
 }
 
 void ConnectionState::writedDataEvent(stefanfrings::HttpConnectionHandler &conHndl, qint64 bytesWriten){
-    qDebug() << "Warning: " << "Event writedDataEvent was received in not appropriate state '" << m_StateName << "':";
-    qDebug() << "Info: HttpConnectionHandler = " << &conHndl;
+    qDebug() << "Info: HttpConnectionHandler = " << &conHndl << "Event writedDataEvent state '" << m_StateName << "': bytesWriten = " << bytesWriten;
 }
 
 void ConnectionState::asynchronousWorkerEvent(stefanfrings::HttpConnectionHandler &conHndl){

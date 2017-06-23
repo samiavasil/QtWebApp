@@ -332,6 +332,7 @@ QWebSocket *QWebSocket::upgradeFrom(QTcpSocket *tcpSocket, QWebSocketHandshakeRe
         QList<QWebSocketProtocol::Version> supportedVersions;
         supportedVersions << QWebSocketProtocol::currentVersion();	//we only support V13
         QStringList supportedProtocols;	 //no protocols are currently supported
+       // supportedProtocols.append("mqtt");
         QStringList supportedExtensions; //no extensions are currently supported
         QWebSocketHandshakeResponse response(wsRequest,
                                              serverName,

@@ -1,16 +1,16 @@
-#include "websocketrequeststate.h"
+#include "websockethandlingstate.h"
 #include<QDebug>
 
 namespace SM {
-WebSocketRequestState::WebSocketRequestState(const QString &name):ConnectionState(name){}
+WebSocketHandlingState::WebSocketHandlingState(const QString &name):ConnectionState(name){}
 
-void WebSocketRequestState::handlingLoopEvent( stefanfrings::HttpConnectionHandler &conHndl )
+void WebSocketHandlingState::handlingLoopEvent( stefanfrings::HttpConnectionHandler &conHndl )
 {
     qDebug() << "Info:  Websocke handler = " << &conHndl;
     conHndl.m_Dirty = false;
 }
 
-void WebSocketRequestState::websocketbinaryFrameReceivedEvent(stefanfrings::HttpConnectionHandler &conHndl, const QByteArray &data, bool final)
+void WebSocketHandlingState::websocketbinaryFrameReceivedEvent(stefanfrings::HttpConnectionHandler &conHndl, const QByteArray &data, bool final)
 {
     qDebug() << "Websocket Bynary Message:";
     conHndl.requestHandler->websocketbinaryFrameReceived( conHndl.m_WebSocket, data, final );
@@ -19,7 +19,7 @@ void WebSocketRequestState::websocketbinaryFrameReceivedEvent(stefanfrings::Http
     conHndl.readTimer.start(readTimeout);
 }
 
-void WebSocketRequestState::websocketTextMessageEvent(stefanfrings::HttpConnectionHandler &conHndl, const QString &data)
+void WebSocketHandlingState::websocketTextMessageEvent(stefanfrings::HttpConnectionHandler &conHndl, const QString &data)
 {
     if(data=="ping")
     {

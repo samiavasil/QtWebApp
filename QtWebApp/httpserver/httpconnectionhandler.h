@@ -25,7 +25,7 @@ namespace SM {
     class HttpConnectionHandshakeState;
     class HttpReadRequestState;
     class HttpHandleRequestState;
-    class WebSocketRequestState;
+    class WebSocketHandlingState;
 }
 
 
@@ -72,7 +72,7 @@ class DECLSPEC HttpConnectionHandler : public QObject
     friend class SM::HttpConnectionHandshakeState;
     friend class SM::HttpReadRequestState;
     friend class SM::HttpHandleRequestState;
-    friend class SM::WebSocketRequestState;
+    friend class SM::WebSocketHandlingState;
 
     Q_DISABLE_COPY(HttpConnectionHandler)
 public:
@@ -119,7 +119,7 @@ public slots:
 
     void readyRead();
 
-    void bytesWritten( quint64 bytesWriten );
+    void bytesWritten(qint64 bytesWriten );
 
     void AsynchronousTaskFinished();
 
@@ -176,6 +176,8 @@ private:
     QTcpSocket* socket;
 
     QWebSocket* m_WebSocket;
+
+    QWebSocketHandshakeRequest* m_WsHandshakeRequest;
 
     /** Time for read timeout detection */
     QTimer readTimer;
