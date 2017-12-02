@@ -11,4 +11,5 @@ In order to work correctly DEMO1 you need to copy directory /etc (located in Dem
 Demo1 executable will be located after the build.
 
 You can go in browser on https://localhost:8080 and there is located a link to simple Websockets demo. 
+
 P.S.  Your browser can give you a point where your conection isn't secured (becouse used certificate aren't signed by CA) and you need to skip this and continue. 
